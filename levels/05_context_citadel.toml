@@ -1,0 +1,295 @@
+# ============================================================================
+#  WORLD 5 — THE CONTEXT CITADEL
+#  An obsidian fortress over a lava sea. The final ascent to the Great Window.
+# ============================================================================
+[level]
+id = 5
+name = "The Context Citadel"
+subtitle = "At the top of the tower, everything comes together"
+story = "The last Sparks have been drawn to the Context Citadel, a fortress of obsidian and gold above a molten sea. Sweepers, Glitchlings and Wisps all guard the spiral tower. At its summit waits the Great Context Window."
+music = "citadel"
+seed = 5505
+spawn = [0, 2.5, 0]
+goal = [30, 34.5, 90]
+parTime = 200
+
+[theme]
+skyTop = "#2a1032"
+skyHorizon = "#ff6c3c"
+skyBottom = "#ff9c5c"
+sunColor = "#ffb272"
+sunDir = [0.5, 0.26, 0.82]
+sunIntensity = 2.4
+ambSky = "#a05c7c"
+ambGround = "#c4583a"
+fogColor = "#7c2c3c"
+fogDensity = 0.0085
+floor = "lava"
+floorY = -6
+floorColor = "#ff5a1a"
+floorColor2 = "#3a0a0a"
+clouds = 0.35
+stars = 0
+bloom = 0.95
+exposure = 1.0
+saturation = 1.0
+contrast = 1.08
+particles = "ember"
+particleColor = "#ffb060"
+accent = "#ff7a45"
+wind = [0.3, 0.2]
+
+[[island]]
+pos = [0, 2, 0]
+radius = 7
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+
+[[island]]
+pos = [0, 3, 32]
+radius = 6
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.5
+
+[[island]]
+pos = [36, 5, 36]
+radius = 6
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.5
+
+[[island]]
+pos = [48, 14, 44]
+radius = 5
+shape = "pillar"
+style = "gold"
+decor = "citadel"
+density = 0.5
+
+[[island]]
+pos = [48, 16, 76]
+radius = 6
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.5
+
+# the summit tower
+[[island]]
+pos = [30, 34.5, 90]
+radius = 5.5
+shape = "pillar"
+style = "gold"
+
+# scenery spires
+[[island]]
+pos = [-35, 30, 60]
+radius = 8
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.4
+
+[[island]]
+pos = [80, 24, 100]
+radius = 10
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.4
+
+[[island]]
+pos = [-10, 18, 110]
+radius = 7
+shape = "pillar"
+style = "obsidian"
+decor = "citadel"
+density = 0.4
+
+[[path]]
+from = [0, 2, 10]
+to = [0, 2, 22]
+count = 4
+shape = "block"
+size = [3, 0.6, 3]
+style = "gold"
+move = { type = "bob", amp = 1.2, speed = 1.6 }
+alternate = true
+
+[[path]]
+from = [10, 3.5, 36]
+to = [26, 4.5, 36]
+count = 3
+shape = "block"
+size = [3, 0.8, 3]
+style = "obsidian"
+move = { type = "line", axis = [0, 0, 1], amp = 3.5, speed = 1.3 }
+alternate = true
+
+[[path]]
+from = [48, 14.5, 54]
+to = [48, 15.5, 66]
+count = 3
+radius = 1.5
+style = "gold"
+move = { type = "circle", radius = 1.5, speed = 1.5, stagger = 1.2 }
+
+[[disc]]
+pos = [42, 16.5, 82]
+radius = 1.4
+style = "gold"
+
+[[spiral]]
+center = [30, 90]
+radius = 9
+from_y = 17.5
+to_y = 33
+count = 13
+start_deg = -38
+deg_per_step = 34
+size = [2.4, 0.6, 2.4]
+style = "obsidian"
+move = { type = "bob", amp = 0.8, speed = 1.5 }
+
+[[block]]
+pos = [-10, 5, 38]
+size = [3, 1, 3]
+style = "gold"
+
+[[disc]]
+pos = [15, 27, 90]
+radius = 1.4
+style = "gold"
+
+[[bouncer]]
+pos = [40, 5, 36]
+power = 26
+
+[[sparks]]
+type = "ring"
+center = [0, 3.2, 0]
+radius = 4
+count = 6
+
+[[sparks]]
+type = "ring"
+center = [0, 4.2, 32]
+radius = 3.6
+count = 6
+
+[[sparks]]
+type = "column"
+pos = [40, 7, 36]
+count = 6
+step = 1.4
+
+[[sparks]]
+type = "ring"
+center = [48, 15.2, 44]
+radius = 3
+count = 6
+
+[[sparks]]
+type = "ring"
+center = [48, 17.2, 76]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [30, 36, 90]
+radius = 3.5
+count = 10
+
+[[token]]
+pos = [-10, 5.8, 38]
+
+[[token]]
+pos = [50, 14.8, 47]
+
+[[token]]
+pos = [15, 27.8, 90]
+
+[[checkpoint]]
+pos = [-2.5, 3, 35]
+
+[[checkpoint]]
+pos = [33, 5, 33]
+
+[[checkpoint]]
+pos = [46, 16, 73]
+
+[[laser]]
+pos = [0, 3, 32]
+length = 5.6
+speed = 1.6
+height = 0.55
+
+[[laser]]
+pos = [36, 5, 36]
+length = 5.6
+speed = -1.3
+height = 0.55
+
+[[laser]]
+pos = [48, 16, 76]
+length = 5.8
+speed = 1.4
+height = 0.55
+
+[[enemy]]
+type = "glitchling"
+a = [-3, 3, 29]
+b = [3, 3, 29]
+speed = 3.0
+
+[[enemy]]
+type = "glitchling"
+a = [33, 5, 39]
+b = [39, 5, 39]
+speed = 3.0
+
+[[enemy]]
+type = "wisp"
+pos = [36, 8, 36]
+range = 8
+speed = 3.0
+
+[[enemy]]
+type = "wisp"
+pos = [48, 19, 76]
+range = 8
+speed = 3.2
+
+[[enemy]]
+type = "wisp"
+pos = [30, 26, 90]
+range = 10
+speed = 3.4
+
+[[enemy]]
+type = "wisp"
+pos = [30, 32, 90]
+range = 10
+speed = 3.4
+
+[[hint]]
+pos = [0, 2, 5]
+radius = 3
+text = "The final ascent. Everything you've learned comes together here"
+
+[[decor]]
+mesh = "statue"
+pos = [-35, 30, 60]
+rot = 0.6
+scale = 5
+
+[[decor]]
+mesh = "statue"
+pos = [80, 24, 100]
+rot = -2.2
+scale = 6

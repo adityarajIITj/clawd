@@ -1,0 +1,255 @@
+# ============================================================================
+#  WORLD 4 — NEURAL NEBULA
+#  Crystal islets drifting through a starlit nebula. Gravity runs light here.
+# ============================================================================
+[level]
+id = 4
+name = "Neural Nebula"
+subtitle = "Between the stars, every thought connects"
+story = "Past the edge of the sky lies the Neural Nebula, where crystal islets orbit like thoughts mid-formation. Gravity is gentle, but Hallucination Wisps drift through the dark and chase anything bright."
+music = "nebula"
+seed = 4404
+spawn = [0, 0.5, 0]
+goal = [0, 22, 113]
+gravity = 0.8
+killY = -26
+parTime = 150
+
+[theme]
+skyTop = "#08082a"
+skyHorizon = "#3a2870"
+skyBottom = "#180f3e"
+sunColor = "#b9c8ff"
+sunDir = [-0.4, 0.62, 0.5]
+sunIntensity = 1.6
+ambSky = "#7272c4"
+ambGround = "#40285e"
+fogColor = "#261c4e"
+fogDensity = 0.0085
+floor = "nebula"
+floorY = -30
+floorColor = "#7a3ab8"
+floorColor2 = "#2ab8d8"
+clouds = 0
+stars = 1
+bloom = 1.0
+exposure = 1.05
+saturation = 1.15
+contrast = 1.06
+particles = "mote"
+particleColor = "#a4ecff"
+accent = "#8f7bff"
+wind = [0.2, 0.1]
+
+[[island]]
+pos = [0, 0, 0]
+radius = 6
+style = "crystal"
+decor = "crystal"
+
+[[island]]
+pos = [0, 1, 28]
+radius = 5
+style = "violet"
+decor = "crystal"
+density = 0.6
+
+[[island]]
+pos = [8, 9, 38]
+radius = 4
+style = "crystal"
+decor = "crystal"
+density = 0.5
+
+[[island]]
+pos = [-4, 12, 44]
+radius = 2.5
+style = "violet"
+
+[[island]]
+pos = [18, 17, 46]
+radius = 4.5
+style = "violet"
+decor = "crystal"
+density = 0.5
+
+[[island]]
+pos = [18, 18, 82]
+radius = 6
+style = "crystal"
+decor = "crystal"
+density = 0.6
+
+[[island]]
+pos = [18, 18.5, 98]
+radius = 5.5
+style = "violet"
+decor = "crystal"
+density = 0.6
+
+[[island]]
+pos = [0, 22, 110]
+radius = 7
+style = "crystal"
+decor = "crystal"
+density = 0.5
+
+# scenery
+[[island]]
+pos = [-45, 8, 60]
+radius = 12
+style = "violet"
+decor = "crystal"
+density = 0.4
+
+[[island]]
+pos = [60, 30, 70]
+radius = 10
+style = "crystal"
+decor = "crystal"
+density = 0.4
+
+[[island]]
+pos = [-30, 35, 130]
+radius = 14
+style = "violet"
+decor = "crystal"
+density = 0.3
+
+# orbiting discs around the first gap
+[[disc]]
+pos = [0, 0.5, 14]
+radius = 1.8
+style = "crystal"
+move = { type = "circle", radius = 3.5, speed = 0.9, phase = 0 }
+
+[[disc]]
+pos = [0, 0.5, 14]
+radius = 1.8
+style = "crystal"
+move = { type = "circle", radius = 3.5, speed = 0.9, phase = 3.14159 }
+
+[[path]]
+from = [18, 17, 56]
+to = [18, 17, 72]
+count = 4
+radius = 1.5
+style = "violet"
+move = { type = "bob", amp = 1.5, speed = 1.2, stagger = 0.8 }
+
+[[path]]
+from = [12, 20, 102]
+to = [6, 21, 106]
+count = 2
+radius = 1.4
+style = "crystal"
+move = { type = "bob", amp = 0.8, speed = 1.0, stagger = 1.6 }
+
+[[disc]]
+pos = [8, 31, 116]
+radius = 2
+style = "violet"
+
+[[bouncer]]
+pos = [3, 1, 30]
+power = 22
+
+[[bouncer]]
+pos = [10, 9, 40]
+power = 22
+
+[[bouncer]]
+pos = [4, 22, 108]
+power = 24
+
+[[sparks]]
+type = "ring"
+center = [0, 1.2, 0]
+radius = 3.5
+count = 6
+
+[[sparks]]
+type = "ring"
+center = [0, 2.0, 14]
+radius = 3.5
+count = 8
+
+[[sparks]]
+type = "column"
+pos = [3, 3, 30]
+count = 6
+step = 1.4
+
+[[sparks]]
+type = "column"
+pos = [10, 11, 40]
+count = 6
+step = 1.4
+
+[[sparks]]
+type = "ring"
+center = [18, 19.3, 82]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "arc"
+from = [18, 19.5, 87]
+to = [18, 20, 93]
+height = 3
+count = 5
+
+[[sparks]]
+type = "ring"
+center = [0, 23.5, 110]
+radius = 5
+count = 10
+
+[[token]]
+pos = [0, 2.8, 14]
+
+[[token]]
+pos = [-4, 12.8, 44]
+
+[[token]]
+pos = [8, 31.8, 116]
+
+[[checkpoint]]
+pos = [20, 17, 44]
+
+[[checkpoint]]
+pos = [15, 18, 80]
+
+[[enemy]]
+type = "wisp"
+pos = [0, 3, 28]
+range = 7
+speed = 2.6
+
+[[enemy]]
+type = "wisp"
+pos = [14, 20, 82]
+range = 8
+speed = 3.0
+
+[[enemy]]
+type = "wisp"
+pos = [22, 20, 84]
+range = 8
+speed = 3.0
+
+[[enemy]]
+type = "wisp"
+pos = [0, 24, 112]
+range = 8
+speed = 3.2
+
+[[hint]]
+pos = [0, 0, 4]
+radius = 3
+text = "Gravity is lighter in the Nebula. Your jumps carry much further"
+
+[[hint]]
+pos = [0, 1, 25]
+radius = 3
+text = "Hallucination Wisps chase anything bright — stomp them or outrun them"

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#120e0c">
+  <title>CLAWD — The Spark Odyssey</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpolygon fill='%23d97757' points='50,0 56,38 83,17 62,44 100,50 62,56 83,83 56,62 50,100 44,62 17,83 38,56 0,50 38,44 17,17 44,38'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <div id="ui">
+    <div id="hud">
+      <div class="hud-left">
+        <div id="hearts"></div>
+        <div id="sparks" class="chip">
+          <svg width="22" height="22" viewBox="0 0 100 100"><polygon fill="#ffb37a" stroke="#ffb37a" stroke-width="6" stroke-linejoin="round" points="50,0 56,38 83,17 62,44 100,50 62,56 83,83 56,62 50,100 44,62 17,83 38,56 0,50 38,44 17,17 44,38"/></svg>
+          <span id="sparkCount"></span>
+        </div>
+        <div id="tokens" class="chip"></div>
+      </div>
+      <div class="hud-right">
+        <div id="timer" class="chip mono">0:00.00</div>
+        <div id="fps" class="mono"></div>
+      </div>
+    </div>
+    <div id="banner"></div>
+    <div id="toast"></div>
+    <div id="screen" class="screen"></div>
+  </div>
+
+  <div id="rotate"><div><div class="rot-phone"></div><b>Turn your device sideways</b><span>Clawd needs room to run</span></div></div>
+
+  <div id="loading">
+    <div class="load-inner">
+      <svg class="load-star" width="72" height="72" viewBox="0 0 100 100"><polygon fill="#d97757" stroke="#d97757" stroke-width="5" stroke-linejoin="round" points="50,0 56,38 83,17 62,44 100,50 62,56 83,83 56,62 50,100 44,62 17,83 38,56 0,50 38,44 17,17 44,38"/></svg>
+      <div class="load-title">CLAWD</div>
+      <div class="load-sub">The Spark Odyssey</div>
+      <div id="loadbar"><i></i></div>
+      <div id="loadlabel">Starting…</div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

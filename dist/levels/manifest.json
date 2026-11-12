@@ -1,0 +1,127 @@
+[
+ {
+  "id": 1,
+  "file": "01_prompt_meadows.json",
+  "name": "Prompt Meadows",
+  "subtitle": "Every great journey begins with a single prompt",
+  "theme": {
+   "skyTop": [
+    0.3098,
+    0.5255,
+    0.8314
+   ],
+   "skyHorizon": [
+    1.0,
+    0.8431,
+    0.6824
+   ],
+   "accent": [
+    0.851,
+    0.4667,
+    0.3412
+   ]
+  },
+  "sparks": 48,
+  "parTime": 90
+ },
+ {
+  "id": 2,
+  "file": "02_token_falls.json",
+  "name": "Token Falls",
+  "subtitle": "Where words pour down like water",
+  "theme": {
+   "skyTop": [
+    0.2275,
+    0.5412,
+    0.8392
+   ],
+   "skyHorizon": [
+    0.7686,
+    0.9255,
+    0.9412
+   ],
+   "accent": [
+    0.2471,
+    0.7216,
+    0.6588
+   ]
+  },
+  "sparks": 49,
+  "parTime": 120
+ },
+ {
+  "id": 3,
+  "file": "03_gradient_dunes.json",
+  "name": "Gradient Dunes",
+  "subtitle": "Descend carefully. The sand remembers every step",
+  "theme": {
+   "skyTop": [
+    0.4157,
+    0.2824,
+    0.651
+   ],
+   "skyHorizon": [
+    1.0,
+    0.6824,
+    0.4706
+   ],
+   "accent": [
+    0.9098,
+    0.5686,
+    0.3529
+   ]
+  },
+  "sparks": 48,
+  "parTime": 140
+ },
+ {
+  "id": 4,
+  "file": "04_neural_nebula.json",
+  "name": "Neural Nebula",
+  "subtitle": "Between the stars, every thought connects",
+  "theme": {
+   "skyTop": [
+    0.0314,
+    0.0314,
+    0.1647
+   ],
+   "skyHorizon": [
+    0.2275,
+    0.1569,
+    0.4392
+   ],
+   "accent": [
+    0.5608,
+    0.4824,
+    1.0
+   ]
+  },
+  "sparks": 55,
+  "parTime": 150
+ },
+ {
+  "id": 5,
+  "file": "05_context_citadel.json",
+  "name": "The Context Citadel",
+  "subtitle": "At the top of the tower, everything comes together",
+  "theme": {
+   "skyTop": [
+    0.1647,
+    0.0627,
+    0.1961
+   ],
+   "skyHorizon": [
+    1.0,
+    0.4235,
+    0.2353
+   ],
+   "accent": [
+    1.0,
+    0.4784,
+    0.2706
+   ]
+  },
+  "sparks": 59,
+  "parTime": 200
+ }
+]

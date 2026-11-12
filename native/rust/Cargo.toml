@@ -1,0 +1,16 @@
+[package]
+name = "clawd_core"
+version = "1.0.0"
+edition = "2021"
+description = "CLAWD: The Spark Odyssey - character physics & procedural island terrain (wasm)"
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1
+strip = true

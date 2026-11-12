@@ -1,0 +1,4 @@
+native/rust/target/
+__pycache__/
+*.pyc
+.claude/
