@@ -33,6 +33,14 @@ export class Audio {
     this.musicBus.connect(this.master);
     this.sfxBus.connect(this.master);
     this.applyVolumes();
+    // Only one tab/window plays at a time: the one in use claims audio, the others go quiet.
+    this.tabId = Math.random();
+    this.chan = 'BroadcastChannel' in window ? new BroadcastChannel('clawd-audio') : null;
+    if (this.chan) this.chan.onmessage = (e) => { if (e.data && e.data.claim !== this.tabId) this.ctx.suspend(); };
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) this.ctx.suspend();
+      else this.resume();
+    });
     // Only SFX block startup; music tracks stream in per world (see loadTrack).
     const names = SFX.map((s) => `sfx_${s}`);
     this.loading = {};
@@ -63,7 +71,11 @@ export class Audio {
     return this.loading[key];
   }
 
-  resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
+  resume() {
+    if (!this.ctx || document.hidden) return;
+    if (this.chan) this.chan.postMessage({ claim: this.tabId });
+    if (this.ctx.state !== 'running') this.ctx.resume();
+  }
 
   applyVolumes() {
     if (!this.ctx) return;

@@ -107,8 +107,9 @@ class Game {
     };
     requestAnimationFrame(loop);
     try { indexedDB.deleteDatabase('clawd-audio'); } catch (_) { /* old song-upload storage */ }
-    addEventListener('pointerdown', () => this.audio.resume(), { once: true });
-    addEventListener('keydown', () => this.audio.resume(), { once: true });
+    addEventListener('pointerdown', () => this.audio.resume());
+    addEventListener('keydown', () => this.audio.resume());
+    addEventListener('focus', () => this.audio.resume());
   }
 
   // ---------------------------------------------------------------------------
