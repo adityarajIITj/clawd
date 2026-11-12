@@ -1,9 +1,9 @@
 """
-CLAWD: The Spark Odyssey — procedural audio generator.
+CLAWD: The Spark Odyssey — procedural sound-effect generator.
 
-Synthesises every sound effect and the full adaptive soundtrack from scratch
-(additive synthesis + FFT convolution reverb) and writes 16-bit WAV files.
-No samples, no external assets: the whole score is deterministic code.
+Synthesises every sound effect from scratch (additive synthesis + FFT
+convolution reverb) and writes 16-bit WAV files. The soundtrack is not
+generated here: it is the author's own recording in assets/music/.
 
     python tools/audiogen.py <out_dir>
 """
@@ -13,7 +13,6 @@ import sys
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 import wave
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -113,22 +112,6 @@ def inst_bell(f: float, dur: float, bright: float = 1.0) -> np.ndarray:
     return y * att
 
 
-def inst_kalimba(f: float, dur: float) -> np.ndarray:
-    t = t_axis(dur)
-    y = (np.sin(2 * np.pi * f * t) * np.exp(-t / 0.6)
-         + 0.3 * np.sin(2 * np.pi * f * 5.95 * t) * np.exp(-t / 0.05)
-         + 0.15 * np.sin(2 * np.pi * f * 2.0 * t) * np.exp(-t / 0.3))
-    return y * np.minimum(1, t / 0.002)
-
-
-def inst_marimba(f: float, dur: float) -> np.ndarray:
-    t = t_axis(dur)
-    y = (np.sin(2 * np.pi * f * t) * np.exp(-t / 0.35)
-         + 0.4 * np.sin(2 * np.pi * f * 3.93 * t) * np.exp(-t / 0.08)
-         + 0.12 * np.sin(2 * np.pi * f * 9.2 * t) * np.exp(-t / 0.02))
-    return y * np.minimum(1, t / 0.002)
-
-
 def inst_pluck(f: float, dur: float, harm: int = 10, tau: float = 0.5) -> np.ndarray:
     t = t_axis(dur)
     y = np.zeros_like(t)
@@ -146,334 +129,6 @@ def inst_pad(f: float, dur: float, detune: float = 0.006, harm: int = 7) -> np.n
     y *= env_adsr(len(t), min(0.6, dur * 0.3), 0.3, 0.8, min(0.8, dur * 0.3))
     lfo = 1 + 0.08 * np.sin(2 * np.pi * 0.3 * t)
     return y * lfo / 3
-
-
-def inst_brass(f: float, dur: float) -> np.ndarray:
-    t = t_axis(dur)
-    bright = env_adsr(len(t), 0.06, 0.2, 0.6, 0.1)
-    y = np.zeros_like(t)
-    for k in range(1, 12):
-        y += np.sin(2 * np.pi * f * k * t * (1 + 0.002 * np.sin(2 * np.pi * 5 * t))) / k * (bright ** (k * 0.25))
-    return y * env_adsr(len(t), 0.03, 0.1, 0.75, 0.12) * 0.5
-
-
-def inst_bass(f: float, dur: float, grit: float = 1.2) -> np.ndarray:
-    t = t_axis(dur)
-    y = np.tanh(grit * np.sin(2 * np.pi * f * t)) + 0.3 * np.sin(2 * np.pi * f * 2 * t)
-    return y * env_adsr(len(t), 0.005, 0.15, 0.6, 0.06)
-
-
-def inst_oud(f: float, dur: float) -> np.ndarray:
-    t = t_axis(dur)
-    y = np.zeros_like(t)
-    for k in range(1, 14):
-        y += np.sin(2 * np.pi * f * k * t) / k * np.exp(-t * (0.8 + k * 0.9))
-    return y * np.minimum(1, t / 0.002)
-
-
-def inst_bansuri(f: float, dur: float) -> np.ndarray:
-    """Bamboo flute: soft fundamental, delayed vibrato, breath noise."""
-    t = t_axis(dur)
-    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.2 * t) * np.clip((t - 0.25) / 0.4, 0, 1)
-    ph = 2 * np.pi * f * np.cumsum(vib) / SR
-    y = np.sin(ph) + 0.18 * np.sin(2 * ph) + 0.06 * np.sin(3 * ph)
-    breath = lowpass(noise(len(t), int(f) % 97), 2600) * 0.12
-    env = env_adsr(len(t), min(0.12, dur * 0.3), 0.1, 0.85, min(0.25, dur * 0.4))
-    return (y + breath) * env
-
-
-def inst_harmonium(f: float, dur: float) -> np.ndarray:
-    """Reed organ: rich harmonics with two slightly detuned reeds."""
-    t = t_axis(dur)
-    y = np.zeros_like(t)
-    for d in (0.0, 0.0035):
-        for k in range(1, 9):
-            y += np.sin(2 * np.pi * f * (1 + d) * k * t + k) * (1 / k ** 1.1) * (1.0 if k % 2 else 0.7)
-    return y * env_adsr(len(t), 0.18, 0.2, 0.85, 0.35) / 5
-
-
-def inst_santoor(f: float, dur: float) -> np.ndarray:
-    """Hammered dulcimer: bright strike with a soft shimmering tail (paired strings)."""
-    t = t_axis(dur)
-    y = np.zeros_like(t)
-    for d in (-0.002, 0.002):
-        for k, a in ((1, 1.0), (2, 0.45), (3, 0.25), (4.1, 0.12), (5.3, 0.06)):
-            y += a * np.sin(2 * np.pi * f * (1 + d) * k * t) * np.exp(-t * (1.6 + k * 1.4))
-    return y * np.minimum(1, t / 0.002) * 0.6
-
-
-def inst_tanpura(f: float, dur: float) -> np.ndarray:
-    """Drone with jawari buzz: many harmonics swelling in and out."""
-    t = t_axis(dur)
-    y = np.zeros_like(t)
-    for k in range(1, 14):
-        swell = 0.5 + 0.5 * np.sin(2 * np.pi * (0.15 + k * 0.037) * t + k)
-        y += np.sin(2 * np.pi * f * k * t) / k ** 0.9 * swell
-    return y * env_adsr(len(t), 0.4, 0.3, 0.8, 0.6) / 6
-
-
-def drum_kick(dur: float = 0.4, punch: float = 1.0) -> np.ndarray:
-    t = t_axis(dur)
-    f = 45 + 110 * np.exp(-t / 0.035)
-    ph = 2 * np.pi * np.cumsum(f) / SR
-    return np.sin(ph) * np.exp(-t / 0.16) * punch + 0.15 * noise(len(t), 3) * np.exp(-t / 0.004)
-
-
-def drum_snare(dur: float = 0.25) -> np.ndarray:
-    t = t_axis(dur)
-    n = highpass(noise(len(t), 5), 1500) * np.exp(-t / 0.07)
-    body = np.sin(2 * np.pi * 190 * t) * np.exp(-t / 0.05)
-    return 0.8 * n + 0.5 * body
-
-
-def drum_hat(dur: float = 0.06, seed: int = 9) -> np.ndarray:
-    t = t_axis(dur)
-    return highpass(noise(len(t), seed), 7000) * np.exp(-t / 0.018)
-
-
-def drum_shaker(dur: float = 0.09, seed: int = 11) -> np.ndarray:
-    t = t_axis(dur)
-    e = np.minimum(1, t / 0.02) * np.exp(-t / 0.03)
-    return highpass(noise(len(t), seed), 5000) * e
-
-
-def drum_tabla(f: float = 260, dur: float = 0.3) -> np.ndarray:
-    t = t_axis(dur)
-    fr = f * (1 + 0.4 * np.exp(-t / 0.02))
-    ph = 2 * np.pi * np.cumsum(fr) / SR
-    return np.sin(ph) * np.exp(-t / 0.12) + 0.2 * np.sin(2 * ph) * np.exp(-t / 0.05)
-
-
-# ----------------------------------------------------------------------------
-# composition engine
-# ----------------------------------------------------------------------------
-SCALES = {
-    "major": [0, 2, 4, 5, 7, 9, 11],
-    "minor": [0, 2, 3, 5, 7, 8, 10],
-    "dorian": [0, 2, 3, 5, 7, 9, 10],
-    "lydian": [0, 2, 4, 6, 7, 9, 11],
-    "phrygdom": [0, 1, 4, 5, 7, 8, 10],
-    "pent": [0, 2, 4, 7, 9],
-    "bhupali": [0, 2, 4, 7, 9],
-    "megh": [0, 2, 5, 7, 10],
-    "yaman": [0, 2, 4, 6, 7, 9, 11],
-}
-
-
-@dataclass
-class Track:
-    name: str
-    bpm: float
-    root: int  # midi note of tonic
-    scale: str
-    progression: list[int]  # scale degrees (0-based) per bar
-    lead: str = "bell"
-    arp: str | None = "pluck"
-    pad: bool = True
-    bass: str | None = "bass"
-    drums: str = "soft"  # soft | groove | hand | none | drive
-    bars: int = 16
-    density: float = 0.6
-    reverb_s: float = 2.4
-    reverb_mix: float = 0.3
-    seed: int = 1
-    swing: float = 0.0
-    lead_oct: int = 12
-    extra: dict = field(default_factory=dict)
-
-
-def scale_note(tr: Track, degree: int, octave: int = 0) -> int:
-    sc = SCALES[tr.scale]
-    o, d = divmod(degree, len(sc))
-    return tr.root + sc[d] + 12 * (o + octave)
-
-
-def chord(tr: Track, degree: int) -> list[int]:
-    return [scale_note(tr, degree), scale_note(tr, degree + 2), scale_note(tr, degree + 4)]
-
-
-def place(buf: np.ndarray, sig: np.ndarray, start_s: float, gain: float, pan: float = 0.0) -> None:
-    i = int(start_s * SR)
-    if i >= buf.shape[0]:
-        return
-    j = min(buf.shape[0], i + len(sig))
-    l = np.cos((pan + 1) * np.pi / 4)
-    r = np.sin((pan + 1) * np.pi / 4)
-    buf[i:j, 0] += sig[: j - i] * gain * l
-    buf[i:j, 1] += sig[: j - i] * gain * r
-
-
-LEADS = {
-    "bell": lambda f, d: inst_bell(f, d + 1.2),
-    "kalimba": lambda f, d: inst_kalimba(f, d + 0.8),
-    "marimba": lambda f, d: inst_marimba(f, d + 0.6),
-    "pluck": lambda f, d: inst_pluck(f, d + 0.6),
-    "oud": lambda f, d: inst_oud(f, d + 0.8),
-    "brass": lambda f, d: inst_brass(f, d),
-    "bansuri": lambda f, d: inst_bansuri(f, d + 0.15),
-    "santoor": lambda f, d: inst_santoor(f, d + 1.2),
-}
-
-
-def render_track(tr: Track) -> np.ndarray:
-    rng = np.random.default_rng(tr.seed)
-    beat = 60.0 / tr.bpm
-    bar = beat * 4
-    total = tr.bars * bar
-    tail = tr.reverb_s + 1.0
-    buf = np.zeros((int((total + tail) * SR), 2))
-    sc_len = len(SCALES[tr.scale])
-
-    # --- melody motif: generated once per 2 bars and varied for repetition ----
-    motif_cache: dict[int, list[tuple[float, int, float]]] = {}
-
-    def motif(seed_bar: int) -> list[tuple[float, int, float]]:
-        if seed_bar in motif_cache:
-            return motif_cache[seed_bar]
-        r = np.random.default_rng(tr.seed * 100 + seed_bar)
-        notes = []
-        pos = 0.0
-        deg = int(r.integers(0, 5))
-        while pos < 8:  # 8 beats = 2 bars
-            dur = r.choice([0.5, 0.5, 1.0, 1.0, 1.5, 2.0], p=[0.25, 0.15, 0.25, 0.15, 0.1, 0.1])
-            if r.random() < tr.density:
-                notes.append((pos, deg, dur))
-            deg += int(r.choice([-2, -1, -1, 1, 1, 2, 3, -3]))
-            deg = int(np.clip(deg, -2, 9))
-            pos += dur
-        motif_cache[seed_bar] = notes
-        return notes
-
-    for b in range(tr.bars):
-        t0 = b * bar
-        deg = tr.progression[b % len(tr.progression)]
-        ch = chord(tr, deg)
-
-        # pad
-        if tr.pad:
-            pad_fn = inst_harmonium if tr.extra.get("pad_inst") == "harmonium" else inst_pad
-            for m in ch:
-                place(buf, pad_fn(midi_hz(m), bar + 0.4), t0, 0.07, pan=rng.uniform(-0.4, 0.4))
-        if tr.extra.get("drone"):
-            place(buf, inst_tanpura(midi_hz(tr.root - 12), bar + 0.8), t0, 0.12, pan=-0.25)
-            place(buf, inst_tanpura(midi_hz(tr.root - 5), bar + 0.8), t0 + beat * 2, 0.08, pan=0.25)
-
-        # bass
-        if tr.bass:
-            pattern = tr.extra.get("bass_pattern", [0, 2.5, 3])
-            for k, p in enumerate(pattern):
-                note = ch[0] - 24 + (7 if k == 2 and tr.drums == "drive" else 0)
-                place(buf, inst_bass(midi_hz(note), beat * 0.9), t0 + p * beat, 0.32)
-
-        # arpeggio
-        if tr.arp:
-            fn = LEADS[tr.arp]
-            step = tr.extra.get("arp_step", 0.5)
-            n_steps = int(4 / step)
-            order = [0, 1, 2, 1] if tr.extra.get("arp_shape", "updown") == "updown" else [0, 1, 2, 3]
-            for k in range(n_steps):
-                idx = order[k % len(order)]
-                m = ch[idx % 3] + (12 if idx == 3 else 0)
-                sw = tr.swing * beat * step if k % 2 else 0
-                place(buf, fn(midi_hz(m), step * beat) * 0.9, t0 + k * step * beat + sw, 0.09,
-                      pan=0.35 * np.sin(k * 0.9))
-
-        # lead melody (enters after 4 bars, takes a breath every 8)
-        if tr.lead and b >= 4 and (b % 8) != 7:
-            src_bar = (b // 2) % 2
-            notes = motif(src_bar)
-            if b % 2 == 0:
-                for pos, d, dur in notes:
-                    m = scale_note(tr, deg + d - deg % 2, 0) + tr.lead_oct
-                    # snap strong beats to chord tones for consonance
-                    if pos % 2 == 0:
-                        m = min(ch, key=lambda c: abs((c + tr.lead_oct) - m)) + tr.lead_oct
-                    place(buf, LEADS[tr.lead](midi_hz(m), dur * beat), t0 + pos * beat, 0.16,
-                          pan=rng.uniform(-0.15, 0.15))
-
-        # drums
-        if tr.drums != "none" and b >= 2:
-            for k in range(16):
-                tt = t0 + k * beat / 4 + (tr.swing * beat / 4 if k % 2 else 0)
-                if tr.drums == "soft":
-                    if k in (0, 10):
-                        place(buf, drum_kick(punch=0.8), tt, 0.4)
-                    if k % 4 == 2:
-                        place(buf, drum_shaker(seed=k), tt, 0.12, pan=0.3)
-                    if k == 8:
-                        place(buf, drum_snare() * 0.5, tt, 0.18)
-                elif tr.drums == "groove":
-                    if k in (0, 6, 10):
-                        place(buf, drum_kick(), tt, 0.45)
-                    if k in (4, 12):
-                        place(buf, drum_snare(), tt, 0.25)
-                    if k % 2 == 0:
-                        place(buf, drum_hat(seed=k), tt, 0.08 if k % 4 else 0.12, pan=-0.3)
-                elif tr.drums == "hand":
-                    if k in (0, 7, 10):
-                        place(buf, drum_tabla(110), tt, 0.4)
-                    if k in (3, 6, 11, 14):
-                        place(buf, drum_tabla(330 + 40 * (k % 3)), tt, 0.18, pan=0.25)
-                    if k % 2 == 1:
-                        place(buf, drum_shaker(seed=k), tt, 0.07, pan=-0.3)
-                elif tr.drums == "drive":
-                    if k % 4 == 0:
-                        place(buf, drum_kick(punch=1.1), tt, 0.5)
-                    if k in (4, 12):
-                        place(buf, drum_snare(), tt, 0.3)
-                    place(buf, drum_hat(seed=k), tt, 0.1 if k % 2 else 0.05, pan=0.3)
-                elif tr.drums in ("dholki", "dholki_soft"):
-                    soft = tr.drums == "dholki_soft"
-                    bass = (0, 8) if soft else (0, 6, 8, 14)
-                    slap = (6, 12) if soft else (3, 4, 10, 12)
-                    if k in bass:
-                        place(buf, drum_tabla(115 + (k % 3) * 6), tt, 0.32 if soft else 0.4)
-                    if k in slap:
-                        place(buf, drum_tabla(390 + 30 * (k % 2)), tt, 0.12 if soft else 0.17, pan=0.25)
-                    if not soft and k % 2 == 1:
-                        place(buf, drum_shaker(seed=k), tt, 0.05, pan=-0.3)
-                elif tr.drums == "dadra":
-                    if k in (0, 9):
-                        place(buf, drum_tabla(118), tt, 0.36)
-                    if k in (3, 6, 12, 14):
-                        place(buf, drum_tabla(400 + 25 * (k % 3)), tt, 0.13, pan=0.2)
-                    if k in (5, 11):
-                        place(buf, drum_shaker(seed=k), tt, 0.05, pan=-0.3)
-                elif tr.drums == "sparse":
-                    if k == 0 and b % 2 == 0:
-                        place(buf, drum_kick(punch=0.6), tt, 0.35)
-                    if k in (6, 14):
-                        place(buf, drum_shaker(seed=k), tt, 0.06, pan=0.4)
-
-    # mastering: reverb per channel (decorrelated IRs), then wrap tail for seamless loop
-    out = np.zeros_like(buf)
-    for c in range(2):
-        wet = reverb(buf[:, c], tr.reverb_s, tr.reverb_mix, seed=17 + c * 31)
-        out[:, c] = wet[: len(buf)]
-    loop_n = int(total * SR)
-    loop = out[:loop_n].copy()
-    tail_part = out[loop_n:]
-    loop[: len(tail_part)] += tail_part[: loop_n]
-    # gentle glue compression
-    loop = np.tanh(loop * 1.6) / 1.6
-    return normalize(loop, 0.8)
-
-
-TRACKS = [
-    Track("title", 88, 62, "major", [0, 4, 5, 3, 0, 4, 3, 4], lead="bell", arp="kalimba", drums="soft",
-          bars=16, density=0.55, seed=3, reverb_s=3.0, reverb_mix=0.38),
-    Track("meadows", 100, 67, "major", [0, 4, 5, 3], lead="kalimba", arp="pluck", drums="soft",
-          bars=16, density=0.7, seed=11, swing=0.12),
-    Track("falls", 108, 64, "dorian", [0, 5, 3, 6], lead="marimba", arp="marimba", drums="groove",
-          bars=16, density=0.65, seed=21, extra={"arp_step": 0.25, "arp_shape": "up"}),
-    Track("dunes", 94, 57, "phrygdom", [0, 1, 0, 6], lead="oud", arp="oud", drums="hand",
-          bars=16, density=0.75, seed=31, extra={"arp_step": 0.5}),
-    Track("nebula", 72, 65, "lydian", [0, 1, 5, 4], lead="bell", arp="bell", drums="sparse",
-          bars=12, density=0.45, seed=41, reverb_s=4.0, reverb_mix=0.5, lead_oct=12),
-    Track("citadel", 124, 60, "minor", [0, 5, 2, 6], lead="brass", arp="pluck", drums="drive",
-          bars=16, density=0.7, seed=51, extra={"bass_pattern": [0, 0.75, 1.5, 2.5, 3.0], "arp_step": 0.25}),
-    # Marathi Manus music is the author's own recording (assets/music/*.mp3), not synthesized.
-]
 
 
 # ----------------------------------------------------------------------------
@@ -551,6 +206,29 @@ def sfx_all() -> dict[str, np.ndarray]:
     s["portal"] = reverb(po * 0.5, 1.5, 0.4)
     t = t_axis(0.3)
     s["zap"] = sweep(1800, 300, 0.3, "square", 0.5) * np.exp(-t / 0.1) * 0.35
+    # dash: airy whoosh with a rising edge
+    d = 0.28
+    wh = highpass(noise(int(d * SR), 21), 900) * env_adsr(int(d * SR), 0.02, 0.08, 0.35, 0.16)
+    s["dash"] = wh * 0.7 + 0.35 * sweep(300, 1400, d, "tri", 0.5) * env_adsr(int(d * SR), 0.01, 0.1, 0.2, 0.15)
+    # crate: woody crack + splinters
+    t = t_axis(0.35)
+    crack = np.sin(2 * np.pi * (140 + 260 * np.exp(-t / 0.015)) * t) * np.exp(-t / 0.05)
+    splinter = highpass(noise(len(t), 23), 1800) * np.exp(-t / 0.06) * (0.6 + 0.4 * np.sign(np.sin(2 * np.pi * 37 * t)))
+    s["crate"] = crack + 0.7 * splinter + 0.4 * lowpass(noise(len(t), 24), 500) * np.exp(-t / 0.09)
+    # quest complete: bright rising triad with a sparkle on top
+    q = np.zeros(int(1.4 * SR))
+    for k, m in enumerate([76, 80, 83, 88]):
+        b = inst_bell(midi_hz(m), 1.0) + 0.5 * inst_pluck(midi_hz(m - 12), 1.0)
+        i = int(k * 0.085 * SR)
+        q[i:i + len(b)] += b[: len(q) - i] * (0.8 + 0.1 * k)
+    s["quest"] = reverb(q, 1.4, 0.3)
+    # heart: warm two-note chime
+    h = np.zeros(int(0.9 * SR))
+    for k, m in enumerate([72, 79]):
+        b = inst_bell(midi_hz(m), 0.7, bright=0.5)
+        i = int(k * 0.12 * SR)
+        h[i:i + len(b)] += b[: len(h) - i]
+    s["heart"] = reverb(h, 1.0, 0.3)
     return {k: normalize(v, 0.85) for k, v in s.items()}
 
 
@@ -561,10 +239,6 @@ def main() -> None:
     for name, data in sfx.items():
         write_wav(out / f"sfx_{name}.wav", data)
     print(f"  [audio] {len(sfx)} sound effects")
-    for tr in TRACKS:
-        data = render_track(tr)
-        write_wav(out / f"music_{tr.name}.wav", data)
-        print(f"  [audio] music_{tr.name}.wav  {len(data) / SR:5.1f}s  {tr.bpm:.0f} bpm  {tr.scale}")
 
 
 if __name__ == "__main__":

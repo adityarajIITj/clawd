@@ -1,0 +1,252 @@
+# ============================================================================
+#  SPARK REALMS · WORLD 6 — FROSTBYTE PEAKS
+#  Snow-capped floating summits. Wide gaps built for the dash.
+# ============================================================================
+[level]
+id = 9
+campaign = "clawd"
+name = "Frostbyte Peaks"
+subtitle = "Thin air, bright snow, and very wide gaps"
+story = "High above the meadows the air turns thin and bright. The Frostbyte Peaks keep old Sparks frozen in the snowdrifts, and the summits stand far apart. Good thing someone just learned to dash."
+music = "kandil"
+quests = ["crates", "stomp_all", "tokens"]
+seed = 9909
+spawn = [0, 0.5, 0]
+goal = [44, 19, 107]
+parTime = 150
+
+[theme]
+skyTop = "#5a9ae0"
+skyHorizon = "#dff0ff"
+skyBottom = "#f2f8ff"
+sunColor = "#fff6e8"
+sunDir = [-0.6, 0.5, 0.4]
+sunIntensity = 2.3
+ambSky = "#b8d4f4"
+ambGround = "#9ab4d8"
+fogColor = "#e4f0fc"
+fogDensity = 0.006
+floor = "clouds"
+floorY = -18
+floorColor = "#f4f9ff"
+floorColor2 = "#a8c8ec"
+clouds = 0.5
+stars = 0
+bloom = 0.55
+exposure = 0.93
+saturation = 1.08
+contrast = 1.03
+particles = "snow"
+particleColor = "#ffffff"
+accent = "#5ab0e8"
+wind = [0.8, 0.3]
+
+[[island]]
+pos = [0, 0, 0]
+radius = 8
+style = "ice"
+decor = "frost"
+
+[[island]]
+pos = [0, 2, 32]
+radius = 7
+style = "ice"
+decor = "frost"
+density = 0.7
+
+[[island]]
+pos = [-10, 5, 36]
+radius = 2.2
+style = "ice"
+
+[[island]]
+pos = [0, 3, 54]
+radius = 7
+style = "ice"
+decor = "frost"
+density = 0.7
+
+[[island]]
+pos = [33, 6, 60]
+radius = 6
+style = "ice"
+decor = "frost"
+density = 0.6
+
+[[island]]
+pos = [44, 14, 72]
+radius = 5
+style = "ice"
+decor = "frost"
+density = 0.5
+
+[[island]]
+pos = [44, 19, 104]
+radius = 7
+style = "ice"
+decor = "frost"
+density = 0.6
+
+# distant summits
+[[island]]
+pos = [-45, 12, 60]
+radius = 14
+style = "ice"
+decor = "frost"
+density = 0.4
+
+[[island]]
+pos = [85, 22, 50]
+radius = 16
+style = "ice"
+decor = "frost"
+density = 0.35
+
+[[island]]
+pos = [10, 30, 135]
+radius = 12
+style = "ice"
+decor = "frost"
+density = 0.4
+
+[[path]]
+from = [0, 0.5, 12]
+to = [0, 1.5, 22]
+count = 3
+radius = 1.6
+style = "ice"
+
+# sliding ice floes
+[[path]]
+from = [9, 3.5, 58]
+to = [23, 5, 58]
+count = 3
+shape = "block"
+size = [3, 0.8, 3]
+style = "ice"
+move = { type = "line", axis = [0, 0, 1], amp = 3, speed = 1.0 }
+alternate = true
+
+[[path]]
+from = [44, 15, 81]
+to = [44, 18, 93]
+count = 4
+radius = 1.5
+style = "ice"
+move = { type = "bob", amp = 0.6, speed = 1.0, stagger = 1.0 }
+
+[[disc]]
+pos = [40, 9, 52]
+radius = 1.6
+style = "ice"
+
+[[disc]]
+pos = [52, 26, 110]
+radius = 1.8
+style = "ice"
+
+[[bouncer]]
+pos = [36, 6, 63]
+power = 25
+
+[[bouncer]]
+pos = [48, 19, 106]
+power = 22
+
+[[crate]]
+pos = [3, 2, 35]
+contains = "sparks"
+
+[[crate]]
+pos = [-3, 3, 56]
+contains = "heart"
+
+[[crate]]
+pos = [46, 14, 74]
+contains = "sparks"
+
+[[sparks]]
+type = "ring"
+center = [0, 1.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 3.2, 32]
+radius = 4
+count = 7
+
+[[sparks]]
+type = "arc"
+from = [0, 4.5, 40]
+to = [0, 5.5, 46]
+height = 2.5
+count = 5
+
+[[sparks]]
+type = "ring"
+center = [0, 4.2, 54]
+radius = 4
+count = 7
+
+[[sparks]]
+type = "ring"
+center = [33, 7.2, 60]
+radius = 3.5
+count = 6
+
+[[sparks]]
+type = "column"
+pos = [36, 8, 63]
+count = 6
+step = 1.3
+
+[[sparks]]
+type = "line"
+from = [41, 20.2, 102]
+to = [47, 20.2, 102]
+count = 4
+
+[[token]]
+pos = [-10, 5.8, 36]
+
+[[token]]
+pos = [40, 9.8, 52]
+
+[[token]]
+pos = [52, 26.8, 110]
+
+[[checkpoint]]
+pos = [3, 3, 52]
+
+[[checkpoint]]
+pos = [42, 14, 70]
+
+[[enemy]]
+type = "glitchling"
+a = [-4, 2, 30]
+b = [4, 2, 30]
+speed = 2.4
+
+[[enemy]]
+type = "glitchling"
+a = [30, 6, 63]
+b = [36, 6, 57]
+speed = 2.6
+
+[[enemy]]
+type = "wisp"
+pos = [33, 9, 60]
+range = 7
+speed = 2.8
+
+[[hint]]
+pos = [0, 2, 37]
+radius = 3
+text = "A wide gap! Double jump, then <b>dash</b> in mid-air to make it across"
+
+[[hint]]
+pos = [0, 0, 0]
+radius = 4
+text = "Welcome to the Peaks. You can dash once per jump — it resets when you land"

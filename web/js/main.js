@@ -7,6 +7,7 @@ import { Clawd, Manus } from './player.js';
 import { buildManus, buildLizard, buildKomodo } from './meshes_mh.js';
 import { World } from './level.js';
 import { UI, fmtTime, starIcon } from './ui.js';
+import { QUESTS, BONUS_STARS, questList, countStars } from './quests.js';
 import { loadNative } from './wasm.js';
 import * as M from './meshes.js';
 import { v3, clamp } from './math.js';
@@ -88,7 +89,7 @@ class Game {
       this.players.manus.faces = { neutral: r.loadTexture('img/manus_face.png'), tongue: r.loadTexture('img/manus_face_tongue.png') };
       this.ui.setLoading(0.5, 'Composing the soundtrack…');
       await this.audio.init((p) => this.ui.setLoading(0.5 + p * 0.45, 'Tuning the sound effects…'));
-      this.audio.loadTrack(this.titleTrack());
+      this.audio.loadTrack('title');
       this.ui.setLoading(1, 'Ready');
       this.loadWorld(this.homeWorld());
       this.toTitle();
@@ -133,6 +134,8 @@ class Game {
     this.levelTime = 0;
     this.combo = 0; this.comboT = 0;
     this.heartSparks = 0;
+    this.heartsLost = 0;
+    this.questDone = new Set();
     this.renderer.post = { ...this.renderer.post, ...this.world.post, fade: 0, hurt: 0 };
     // photo face brightness follows the world's light so it sits in the scene
     const env = this.world.env;
@@ -144,9 +147,32 @@ class Game {
 
   isManus() { return this.character === 'manus'; }
   homeWorld() { return this.isManus() ? 6 : 1; }
-  titleTrack() { return this.isManus() ? 'manus' : 'title'; }
   campaignOf(id) { return this.levels[id]?.campaign || 'clawd'; }
-  isLocked(id) { return this.campaignOf(id) === 'manus' ? id > (this.save.unlockedManus || 6) : id > this.save.unlocked; }
+  campaignList(c) { return this.manifest.filter((m) => (m.campaign || 'clawd') === c).sort((a, b) => a.id - b.id); }
+  worldIndex(id) { return this.campaignList(this.campaignOf(id)).findIndex((m) => m.id === id); }
+  worldLabel(id) {
+    const c = this.campaignOf(id), n = this.worldIndex(id) + 1;
+    return c === 'bonus' ? 'Bonus World' : c === 'manus' ? `Maharashtra · World ${n}` : `World ${n}`;
+  }
+  nextWorld(id) { const l = this.campaignList(this.campaignOf(id)); return l[this.worldIndex(id) + 1]?.id || null; }
+  questStars() { return countStars(this.save); }
+  totalStars() { return this.manifest.length * 3; }
+  // A world opens when the one before it in its set is finished; the bonus world opens with quest stars.
+  isLocked(id) {
+    if (this.campaignOf(id) === 'bonus') return this.questStars() < BONUS_STARS;
+    const i = this.worldIndex(id);
+    if (i <= 0) return false;
+    const prev = this.campaignList(this.campaignOf(id))[i - 1].id;
+    return !(this.save.levels[prev] && this.save.levels[prev].done);
+  }
+  stats(finished = false) {
+    const w = this.world, lv = this.levels[this.levelId];
+    return {
+      sparks: w.sparkGot, sparkTotal: w.sparkTotal, tokens: w.tokenGot.filter(Boolean).length,
+      heartsLost: this.heartsLost, time: this.levelTime, par: lv.parTime,
+      stomped: w.stomped, enemyTotal: w.enemyTotal, crates: w.cratesSmashed, crateTotal: w.crates.length, finished,
+    };
+  }
   words() {
     return this.isManus()
       ? { spark: 'Lizard', sparks: 'Lizards', token: 'Komodo Dragon', tokens: 'Komodo dragons' }
@@ -173,9 +199,10 @@ class Game {
       <div class="select-wrap chars">
         <h2>Choose your hero</h2>
         <div class="cards two">
-          ${card('clawd', 'Clawd', 'A small, helpful terracotta critter. Collects Sparks across the five Spark Realms.', CLAWD_ART)}
-          ${card('manus', 'Marathi Manus', 'Man bun, neckband, phone always ready. Collects lizards and Komodo dragons, and unlocks three soothing Maharashtra worlds.', MANUS_ART)}
+          ${card('clawd', 'Clawd', 'A small, helpful terracotta critter. Collects Sparks and golden Tokens.', CLAWD_ART)}
+          ${card('manus', 'Marathi Manus', 'Man bun, neckband, phone always ready. Collects lizards and Komodo dragons instead.', MANUS_ART)}
         </div>
+        <p class="hero-note">Both heroes can play every world. Your progress and quest stars are shared.</p>
         <div class="row"><button data-act="title" class="ghost">Back</button></div>
       </div>`, 'select');
   }
@@ -188,13 +215,14 @@ class Game {
     this.ui.showHUD(false);
     this.input.wantLock = false;
     this.input.releaseLock();
-    this.audio.playMusic(this.titleTrack());
+    this.audio.playMusic('title');
     this.ui.show('title', `
       <div class="title-wrap">
         <div class="logo">
           <div class="logo-star">${starIcon(92, '#d97757')}</div>
           <h1>CLAWD</h1>
           <div class="tagline">The Spark Odyssey</div>
+          <div class="byline">by Aditya</div>
         </div>
         <div class="menu">
           <button data-act="play">Play</button>
@@ -203,7 +231,7 @@ class Game {
           <button data-act="howto">How to Play</button>
           <button data-act="credits">Credits</button>
         </div>
-        <div class="foot">Rendered in WebGL2 · Physics in Rust · VFX in C++ · Levels &amp; music generated in Python</div>
+        <div class="foot">${starIcon(11, '#ffd98a')} ${this.questStars()} / ${this.totalStars()} quest stars · Rendered in WebGL2 · Physics in Rust · VFX in C++ · Levels built in Python</div>
       </div>`, 'title');
   }
 
@@ -219,9 +247,9 @@ class Game {
       return `
         <button class="card ${locked ? 'locked' : ''}" data-act="${locked ? 'locked' : 'world'}" data-id="${m.id}">
           <div class="card-art" style="background:${grad}">
-            <div class="card-num">${m.id}</div>
+            <div class="card-num">${m.campaign === 'bonus' ? '★' : this.worldIndex(m.id) + 1}</div>
             ${artFor(m.id)}
-            ${locked ? '<div class="lock">Locked</div>' : ''}
+            ${locked ? `<div class="lock">${m.campaign === 'bonus' ? `${BONUS_STARS} quest stars` : 'Locked'}</div>` : ''}
           </div>
           <div class="card-body">
             <div class="card-title">${m.name}</div>
@@ -232,18 +260,22 @@ class Game {
               <span>${rec.best ? fmtTime(rec.best) : '—'}</span>
               ${rec.rank ? `<span class="rank r-${rec.rank}">${rec.rank}</span>` : ''}
             </div>
+            <div class="card-quests">${(m.quests || []).map((q) => `<i class="${rec.quests && rec.quests[q] ? 'on' : ''}">★</i>`).join('')}<span>quests</span></div>
           </div>
         </button>`;
     };
-    const mh = this.manifest.filter((m) => m.campaign === 'manus');
-    const base = this.manifest.filter((m) => m.campaign !== 'manus');
-    const cards = this.isManus()
-      ? `<div class="campaign-label">Maharashtra Tales</div><div class="cards three">${mh.map(card).join('')}</div>
-         <div class="campaign-label">The Spark Realms</div><div class="cards">${base.map(card).join('')}</div>`
-      : `<div class="cards">${base.map(card).join('')}</div>`;
+    const sets = { clawd: 'The Spark Realms', manus: 'Maharashtra Tales', bonus: 'Bonus' };
+    const order = this.isManus() ? ['manus', 'clawd', 'bonus'] : ['clawd', 'manus', 'bonus'];
+    const cards = order.map((c) => {
+      const list = this.campaignList(c);
+      if (!list.length) return '';
+      return `<div class="campaign-label">${sets[c]}</div><div class="cards n${Math.min(list.length, 6)}">${list.map(card).join('')}</div>`;
+    }).join('');
+    const stars = this.questStars();
     this.ui.show('select', `
       <div class="select-wrap">
         <h2>Choose a World</h2>
+        <div class="star-total">${starIcon(15, '#ffd98a')} <b>${stars}</b> / ${this.totalStars()} quest stars${stars < BONUS_STARS ? ` · bonus world opens at ${BONUS_STARS}` : ''}</div>
         ${cards}
         <div class="row"><button data-act="title" class="ghost">Back</button></div>
       </div>`, 'select');
@@ -261,10 +293,11 @@ class Game {
     this.cam.startCine({ pos: [goal[0] + 18, goal[1] + 22, goal[2] + 20], look: goal }, behind, 6.5, () => { this.cam.mode = 'hold'; });
     this.ui.show('intro', `
       <div class="intro">
-        <div class="kicker">${lv.campaign === 'manus' ? `Maharashtra · World ${id - 5}` : `World ${id}`}</div>
+        <div class="kicker">${this.worldLabel(id)}</div>
         <h2>${lv.name}</h2>
         <div class="sub">${lv.subtitle}</div>
         <p class="story">${lv.story}</p>
+        ${questList(lv.quests, this.words(), this.stats(), (this.save.levels[id] || {}).quests, { showProgress: false })}
         <div class="row"><button data-act="begin">Begin</button><button data-act="select" class="ghost">Back</button></div>
       </div>`, 'intro');
   }
@@ -277,7 +310,7 @@ class Game {
     this.state = 'play';
     this.ui.showHUD(true);
     this.input.wantLock = true;
-    this.ui.showBanner(lv.name, lv.campaign === 'manus' ? `Maharashtra · World ${lv.id - 5}` : `World ${lv.id}`);
+    this.ui.showBanner(lv.name, this.worldLabel(lv.id));
   }
 
   pause() {
@@ -288,6 +321,7 @@ class Game {
     this.ui.show('pause', `
       <div class="panel">
         <h2>Paused</h2>
+        ${questList(this.levels[this.levelId].quests, this.words(), this.stats(), (this.save.levels[this.levelId] || {}).quests)}
         <div class="menu">
           <button data-act="resume">Resume</button>
           <button data-act="restart">Restart World</button>
@@ -315,8 +349,10 @@ class Game {
       case 'resume': this.resume(); break;
       case 'restart': this.audio.duck(1); this.startWorld(this.levelId); break;
       case 'next': {
-        const n = this.levelId + 1;
-        if (this.levels[n] && this.campaignOf(n) === this.campaignOf(this.levelId)) this.startWorld(n); else this.showEnding();
+        const n = this.nextWorld(this.levelId);
+        if (n) this.startWorld(n);
+        else if (this.campaignOf(this.levelId) === 'bonus') { this.audio.duck(1); this.showSelect(); }
+        else this.showEnding();
         break;
       }
       case 'settings': this.showSettings(); break;
@@ -369,14 +405,15 @@ class Game {
         <div class="howto">
           <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>Move (camera-relative)</span></div>
           <div><kbd>Space</kbd><span>Jump · press again mid-air to double jump</span></div>
-          <div><kbd>Shift</kbd><span>Ground pound (in the air)</span></div>
+          <div><kbd>Shift</kbd><span>Ground pound (in the air) · smashes crates</span></div>
+          <div><kbd>F</kbd><span>Dash · on the ground or once per jump (right-click also works)</span></div>
           <div><kbd>Mouse</kbd><span>Click &amp; drag / pointer-lock to orbit · wheel to zoom</span></div>
           <div><kbd>Q</kbd><kbd>E</kbd><span>Rotate the camera</span></div>
           <div><kbd>Esc</kbd><span>Pause</span></div>
-          <div><kbd>📱</kbd><span>Touch: drag left side to move · drag right side to look · Jump &amp; Pound buttons · ❚❚ to pause</span></div>
-          <div><kbd>🎮</kbd><span>Gamepad: left stick move · A jump · X / triggers pound · right stick camera</span></div>
+          <div><kbd>📱</kbd><span>Touch: drag left side to move · drag right side to look · Jump, Pound &amp; Dash buttons · ❚❚ to pause</span></div>
+          <div><kbd>🎮</kbd><span>Gamepad: left stick move · A jump · X / triggers pound · B / RB dash · right stick camera</span></div>
         </div>
-        <p class="note">Playing as <b>Marathi Manus</b>? Sparks become little lizards and Tokens become Komodo dragons. Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world.</p>
+        <p class="note">Playing as <b>Marathi Manus</b>? Sparks become little lizards and Tokens become Komodo dragons. Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world. Each world also has <b>three quests</b>; every quest earns a star, and 12 stars open the bonus world.</p>
         <div class="row"><button data-act="title">Back</button></div>
       </div>`);
   }
@@ -392,8 +429,9 @@ class Game {
           <div><b>Rendering</b><span>WebGL2 · custom GLSL: soft shadows, HDR bloom, ACES tonemapping, illustrative toon lighting</span></div>
           <div><b>Gameplay core</b><span>Rust → WebAssembly: character controller &amp; procedural island sculpting</span></div>
           <div><b>VFX core</b><span>Freestanding C++ → WebAssembly: 8k-particle simulation</span></div>
-          <div><b>Tools</b><span>Python: level compiler &amp; reachability linter, procedural synthesizer for every note and sound</span></div>
-          <div><b>Assets</b><span>None. Every mesh, texture, note and level is generated from code.</span></div>
+          <div><b>Tools</b><span>Python: level compiler &amp; reachability linter, procedural sound-effect synthesizer</span></div>
+          <div><b>Music</b><span>Soundtrack provided by Aditya</span></div>
+          <div><b>Assets</b><span>Every mesh, sound effect and level is generated from code. Only the soundtrack and the photo face are files.</span></div>
         </div>
         <div class="row"><button data-act="title">Back</button></div>
       </div>`);
@@ -403,14 +441,15 @@ class Game {
     if (this.campaignOf(this.levelId) === 'manus') return this.showManusEnding();
     this.state = 'ending';
     this.ui.showHUD(false);
-    this.audio.playMusic('title');
-    const total = Object.values(this.save.levels).reduce((a, l) => a + (l.tokens || []).filter(Boolean).length, 0);
+    this.audio.playMusic('ending', 1.0);
+    const realm = this.campaignList('clawd');
+    const total = realm.reduce((a, m) => a + ((this.save.levels[m.id] || {}).tokens || []).filter(Boolean).length, 0);
     this.ui.show('ending', `
       <div class="panel wide ending">
         <div class="logo-star small">${starIcon(64, '#d97757')}</div>
         <h2>The Great Context Window is restored</h2>
-        <p class="story">Spark by spark, Clawd carried every lost thought home. The Window glows again over the five realms, wide enough to hold every question anyone might ask. Somewhere in the meadows, a new prompt is already being written.</p>
-        <p class="note center">Golden Tokens found: <b>${total} / 15</b></p>
+        <p class="story">Spark by spark, Clawd carried every lost thought home. The Window glows again over all six realms, wide enough to hold every question anyone might ask. Somewhere in the meadows, a new prompt is already being written.</p>
+        <p class="note center">${this.words().tokens} found: <b>${total} / ${realm.length * 3}</b> · Quest stars: <b>${this.questStars()} / ${this.totalStars()}</b></p>
         <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
       </div>`);
   }
@@ -419,13 +458,13 @@ class Game {
     this.state = 'ending';
     this.ui.showHUD(false);
     this.audio.playMusic('ending', 1.0);
-    const ids = [6, 7, 8];
+    const ids = this.campaignList('manus').map((m) => m.id);
     const total = ids.reduce((a, id) => a + ((this.save.levels[id] || {}).tokens || []).filter(Boolean).length, 0);
     this.ui.show('ending', `
       <div class="panel wide ending">
         <h2>Ghari aalo! — Home at last</h2>
-        <p class="story">From the misty Sahyadri forts to the Konkan pier to the lantern-lit lake, Marathi Manus took the slow road and found every corner worth finding. The kandils are glowing, the chai is hot, and the lizards are fast asleep.</p>
-        <p class="note center">Komodo dragons found: <b>${total} / 9</b></p>
+        <p class="story">From the misty Sahyadri forts to the Konkan pier, the lantern-lit lake and the rooftops of Mumbai, our hero took the slow road and found every corner worth finding. The kandils are glowing, the chai is hot, and the lizards are fast asleep.</p>
+        <p class="note center">${this.words().tokens} found: <b>${total} / ${ids.length * 3}</b> · Quest stars: <b>${this.questStars()} / ${this.totalStars()}</b></p>
         <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
       </div>`);
   }
@@ -436,6 +475,7 @@ class Game {
   hurt(from, zap) {
     if (this.invuln > 0 || this.state !== 'play') return;
     this.hearts--;
+    this.heartsLost++;
     this.invuln = 1.6;
     this.player.flash = 0.25;
     this.cam.shake = 0.8;
@@ -452,6 +492,7 @@ class Game {
     if (this.state !== 'play') return;
     this.state = 'respawn';
     this.hearts--;
+    this.heartsLost++;
     this.audio.play('fall');
     this.respawnT = 0;
   }
@@ -494,6 +535,13 @@ class Game {
     const rank = score >= 88 ? 'S' : score >= 72 ? 'A' : score >= 52 ? 'B' : 'C';
     const rec = this.save.levels[this.levelId] || {};
     const newBest = !rec.best || this.levelTime < rec.best;
+    const finalStats = this.stats(true);
+    const quests = { ...(rec.quests || {}) };
+    const fresh = [];
+    for (const q of lv.quests) {
+      if (QUESTS[q] && QUESTS[q].done(finalStats) && !quests[q]) { quests[q] = true; fresh.push(q); }
+    }
+    const starsBefore = this.questStars();
     const ranks = 'CBAS';
     this.save.levels[this.levelId] = {
       best: newBest ? this.levelTime : rec.best,
@@ -501,18 +549,18 @@ class Game {
       tokens: [0, 1, 2].map((i) => !!((rec.tokens || [])[i] || tokens[i])),
       rank: !rec.rank || ranks.indexOf(rank) > ranks.indexOf(rec.rank) ? rank : rec.rank,
       done: true,
+      quests,
     };
     const camp = this.campaignOf(this.levelId);
-    const lastId = Math.max(...this.manifest.filter((m) => (m.campaign || 'clawd') === camp).map((m) => m.id));
-    if (camp === 'manus') this.save.unlockedManus = Math.max(this.save.unlockedManus || 6, Math.min(lastId, this.levelId + 1));
-    else this.save.unlocked = Math.max(this.save.unlocked, Math.min(lastId, this.levelId + 1));
     localStorage.setItem('clawd.save', JSON.stringify(this.save));
-    const hasNext = this.levelId < lastId;
+    const hasNext = !!this.nextWorld(this.levelId);
+    const bonusOpened = starsBefore < BONUS_STARS && this.questStars() >= BONUS_STARS;
     const W = this.words();
     setTimeout(() => {
+      if (this.state !== 'complete') return;
       this.ui.show('results', `
         <div class="panel results">
-          <div class="kicker">${camp === 'manus' ? `Maharashtra · World ${this.levelId - 5}` : `World ${this.levelId}`} complete</div>
+          <div class="kicker">${this.worldLabel(this.levelId)} complete</div>
           <h2>${lv.name}</h2>
           <div class="rank-big r-${rank}">${rank}</div>
           <div class="res-grid">
@@ -520,8 +568,10 @@ class Game {
             <div><span>${W.tokens}</span><b class="tok">${tokens.map((t) => `<i class="${t ? 'on' : ''}"></i>`).join('')}</b></div>
             <div><span>Time</span><b>${fmtTime(this.levelTime)}${newBest ? ' <em>best!</em>' : ''}</b></div>
           </div>
+          ${questList(lv.quests, W, finalStats, quests, { showProgress: false, justNow: fresh })}
+          ${bonusOpened ? '<div class="bonus-open">★ Bonus world unlocked!</div>' : ''}
           <div class="menu">
-            <button data-act="next">${hasNext ? 'Next World' : 'Finale'}</button>
+            <button data-act="next">${hasNext ? 'Next World' : camp === 'bonus' ? 'World Map' : 'Finale'}</button>
             <button data-act="restart" class="ghost">Replay</button>
             <button data-act="select" class="ghost">World Map</button>
           </div>
@@ -612,14 +662,14 @@ class Game {
     while (this.acc >= STEP) {
       this.acc -= STEP;
       this.world.step(STEP);
-      const ev = phys.step(STEP, ix, iz, inp.jumpHeld, first && inp.jump, first && inp.pound);
+      const ev = phys.step(STEP, ix, iz, inp.jumpHeld, first && inp.jump, first && inp.pound, first && inp.dash);
       if (ev & EV.LAND) landSpeed = phys.state()[11];
       events |= ev;
       first = false;
     }
-    if (first && (inp.jump || inp.pound)) {
+    if (first && (inp.jump || inp.pound || inp.dash)) {
       // no substep ran this frame: carry the press to the next one
-      this.input.pressed.add(inp.jump ? 'Space' : 'ShiftLeft');
+      this.input.pressed.add(inp.jump ? 'Space' : inp.pound ? 'ShiftLeft' : 'KeyF');
     }
     const st = phys.state();
     this.player.onEvents(events, EV, landSpeed);
@@ -630,9 +680,24 @@ class Game {
     if (events & EV.JUMP) { this.audio.play('jump', { vol: 0.55 }); fx.emit(fx.T.DUST, p, 6, [1.2, 1.1, 1.0], 2); }
     if (events & EV.DJUMP) { this.audio.play('djump', { vol: 0.6 }); fx.emit(fx.T.RING, [p[0], p[1] + 0.3, p[2]], 14, [2.2, 1.4, 0.8], 4); }
     if (events & EV.POUND) this.audio.play('pound', { vol: 0.6 });
+    if (events & EV.DASH) {
+      this.audio.play('dash', { vol: 0.7 });
+      const c = this.isManus() ? [1.2, 2.0, 1.2] : [2.2, 1.3, 0.7];
+      for (let k = 0; k < 6; k++) fx.emit(fx.T.TRAIL, [p[0] - st[3] * 0.012 * k, p[1] + 0.3 + Math.random() * 0.5, p[2] - st[5] * 0.012 * k], 2, c, 0.22);
+      fx.emit(fx.T.RING, [p[0], p[1] + 0.5, p[2]], 10, c, 3);
+    }
     if (events & EV.POUND_LAND) {
       this.audio.play('pound_land', { vol: 0.9 });
       this.cam.shake = 0.6;
+      const smashed = this.world.smashCrate(st[10]);
+      if (smashed) {
+        this.audio.play('crate', { vol: 0.9 });
+        phys.bounce(7);
+        if (smashed.contains === 'heart') {
+          if (this.hearts < 3) { this.hearts++; this.ui.popup('+1 ♥', 'heart'); } else this.ui.popup('♥ already full', 'heart');
+          this.audio.play('heart', { vol: 0.8 });
+        }
+      }
       fx.emit(fx.T.RING, [p[0], p[1] + 0.1, p[2]], 28, [1.6, 1.3, 1.1], 9);
       fx.emit(fx.T.DUST, p, 16, [1.2, 1.1, 1.0], 5);
     } else if (events & EV.LAND) {
@@ -678,6 +743,19 @@ class Game {
         this.ui.hint(e.text);
       } else if (e.type === 'goal') {
         this.complete();
+      }
+    }
+    // quests that can be finished mid-run announce themselves once
+    const lvq = this.levels[this.levelId].quests || [];
+    if (lvq.length) {
+      const s = this.stats();
+      for (const q of lvq) {
+        const def = QUESTS[q];
+        if (def && def.live && !this.questDone.has(q) && def.done(s)) {
+          this.questDone.add(q);
+          this.audio.play('quest', { vol: 0.8 });
+          this.ui.popup(`★ ${def.label(this.words(), s)}`, 'quest');
+        }
       }
     }
     if (p[1] < this.world.d.killY) this.fell();
@@ -759,6 +837,9 @@ function artFor(id) {
     6: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M0 110 L0 60 Q40 30 70 55 Q100 25 140 50 Q170 35 200 55 L200 110Z" fill="#4f7a52"/><rect x="60" y="58" width="60" height="22" fill="#6e7276"/><rect x="60" y="52" width="8" height="8" fill="#6e7276"/><rect x="80" y="52" width="8" height="8" fill="#6e7276"/><rect x="100" y="52" width="8" height="8" fill="#6e7276"/><rect x="130" y="50" width="6" height="60" fill="#e8f0f2" opacity=".85"/><g stroke="#cfe4f0" stroke-width="1.5" opacity=".8"><line x1="20" y1="5" x2="16" y2="18"/><line x1="60" y1="10" x2="56" y2="23"/><line x1="110" y1="2" x2="106" y2="15"/><line x1="170" y1="8" x2="166" y2="21"/></g></svg>`,
     7: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="150" cy="58" r="14" fill="#ffe0a0"/><rect x="0" y="80" width="200" height="30" fill="#2aa0b0"/><rect x="20" y="50" width="40" height="60" fill="#b4553a"/><rect x="20" y="46" width="40" height="7" fill="#f2d9a8"/><path d="M40 46 Q42 20 46 14" stroke="#7a5a3a" stroke-width="3" fill="none"/><path d="M46 14 q-14 -2 -20 6 M46 14 q12 -4 18 4 M46 14 q-4 -10 -12 -12 M46 14 q8 -8 14 -8" stroke="#4f9a3a" stroke-width="4" fill="none"/><path d="M110 84 L150 84 L144 92 L116 92Z" fill="#3d6fb0"/><path d="M130 84 L130 62 L142 82Z" fill="#f6eedc"/></svg>`,
     8: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="0" y="80" width="200" height="30" fill="#1a2a5a"/><circle cx="30" cy="12" r="1.5" fill="#fff"/><circle cx="160" cy="20" r="1.5" fill="#fff"/><rect x="40" y="30" width="3" height="52" fill="#b08a50"/><polygon points="52,40 56,50 66,50 58,56 61,66 52,60 43,66 46,56 38,50 48,50" fill="#ff9a3a"/><rect x="140" y="34" width="3" height="48" fill="#b08a50"/><polygon points="152,44 156,54 166,54 158,60 161,70 152,64 143,70 146,60 138,54 148,54" fill="#ff5a7a"/><ellipse cx="90" cy="92" rx="6" ry="2.5" fill="#b8582e"/><circle cx="90" cy="88" r="2.5" fill="#ffcf5a"/><ellipse cx="115" cy="98" rx="6" ry="2.5" fill="#b8582e"/><circle cx="115" cy="94" r="2.5" fill="#ffcf5a"/></svg>`,
+    9: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M10 110 L60 40 L110 110Z" fill="#bcd8f0"/><path d="M60 40 L44 62 L54 58 L60 66 L68 57 L76 62Z" fill="#fff"/><path d="M90 110 L145 55 L200 110Z" fill="#9fc4e8"/><path d="M145 55 L130 70 L140 67 L146 74 L153 66 L160 70Z" fill="#fff"/><g fill="#fff"><circle cx="30" cy="20" r="2"/><circle cx="90" cy="30" r="1.6"/><circle cx="170" cy="18" r="2"/><circle cx="120" cy="12" r="1.4"/></g><path d="M20 96 l8 -18 l8 18Z" fill="#2f7a6a"/><path d="M170 100 l7 -16 l7 16Z" fill="#2f7a6a"/></svg>`,
+    10: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="0" y="92" width="200" height="18" fill="#12204a"/><g fill="#2c3046"><rect x="14" y="40" width="34" height="60"/><rect x="60" y="24" width="30" height="76"/><rect x="104" y="46" width="38" height="54"/><rect x="152" y="30" width="32" height="70"/></g><g fill="#ffd98a"><rect x="20" y="48" width="5" height="6"/><rect x="34" y="60" width="5" height="6"/><rect x="66" y="32" width="5" height="6"/><rect x="78" y="46" width="5" height="6"/><rect x="66" y="62" width="5" height="6"/><rect x="112" y="54" width="5" height="6"/><rect x="128" y="70" width="5" height="6"/><rect x="160" y="40" width="5" height="6"/><rect x="172" y="56" width="5" height="6"/></g><rect x="66" y="16" width="14" height="8" rx="3" fill="#1e2026"/><rect x="92" y="84" width="16" height="7" rx="2" fill="#f2c230"/><rect x="92" y="88" width="16" height="4" fill="#1c1c20"/></svg>`,
+    11: `<svg viewBox="0 0 200 110" class="card-svg"><ellipse cx="50" cy="78" rx="34" ry="8" fill="#ffe1ee"/><path d="M16 78 Q50 108 84 78Z" fill="#ff9ac0"/><ellipse cx="150" cy="56" rx="30" ry="7" fill="#fff6ea"/><path d="M120 56 Q150 84 180 56Z" fill="#f2c9dc"/><g fill="#ffb37a"><polygon points="100,20 103,30 113,31 105,37 108,47 100,41 92,47 95,37 87,31 97,30"/><polygon points="60,40 62,46 68,47 63,51 65,57 60,53 55,57 57,51 52,47 58,46"/><polygon points="140,24 142,30 148,31 143,35 145,41 140,37 135,41 137,35 132,31 138,30"/></g><path d="M40 70 q10 -30 60 -34" stroke="#fff" stroke-width="2" stroke-dasharray="3 5" fill="none"/></svg>`,
     5: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="86" y="18" width="28" height="92" fill="#2a2530"/><rect x="82" y="14" width="36" height="8" fill="#f2c45a"/><circle cx="100" cy="8" r="5" fill="#ffcf86"/><rect x="20" y="60" width="34" height="50" fill="#3a3440"/><rect x="146" y="50" width="34" height="60" fill="#3a3440"/><rect x="0" y="104" width="200" height="6" fill="#ff5a1a"/></svg>`,
   };
   return arts[id] || '';

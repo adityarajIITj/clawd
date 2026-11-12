@@ -7,7 +7,8 @@ id = 3
 name = "Gradient Dunes"
 subtitle = "Descend carefully. The sand remembers every step"
 story = "In the Gradient Dunes the sky melts from violet to gold. Ancient sunbeam sweepers still patrol the mesas, and the sand below swallows anything that falls. Clawd climbs toward the highest ridge."
-music = "dunes"
+music = "kandil"
+quests = ["tokens", "no_hurt", "par"]
 seed = 3303
 spawn = [0, 3.5, 0]
 goal = [44, 18, 100]
@@ -272,3 +273,13 @@ mesh = "statue"
 pos = [-40, 14, 50]
 rot = 0.8
 scale = 6
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [3, 5, 33]
+contains = "sparks"
+
+[[crate]]
+pos = [47, 8, 68]
+contains = "heart"
+

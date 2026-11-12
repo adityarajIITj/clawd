@@ -29,13 +29,22 @@ const PALETTES = {
   8: { foliage: ['#2f6a4a', '#3f7a5a'].map(hex), blossom: ['#ffb347', '#ff7a9a'].map(hex), blossomChance: 0.5,
        flowers: ['#ff9a1a', '#ffc21a', '#ff7a9a'].map(hex), rock: hex('#5a4a50'), crystal: ['#ffd890'].map(hex), stone: hex('#8a8a90'),
        grass: [hex('#24503a'), hex('#5f9a6a')] },
+  9: { foliage: ['#2f7a6a', '#3f8a7a'].map(hex), blossom: ['#ffffff'].map(hex), blossomChance: 0,
+       flowers: ['#bfe8ff', '#ffffff'].map(hex), rock: hex('#9ab0c8'), crystal: ['#bfe8ff', '#e8f6ff', '#9fd0ff'].map(hex), stone: hex('#c8d8e8'),
+       grass: [hex('#8ab0c8'), hex('#e8f4ff')] },
+  10: { foliage: ['#3f6a4a'].map(hex), blossom: ['#ffcf5a'].map(hex), blossomChance: 0,
+       flowers: ['#ffcf5a'].map(hex), rock: hex('#4a4f60'), crystal: ['#ffd890'].map(hex), stone: hex('#8a8f9a'),
+       grass: [hex('#2a3a3a'), hex('#5a7a6a')] },
+  11: { foliage: ['#ff9ac0', '#ffc0d8', '#9fe0c8', '#c8a8f0'].map(hex), blossom: ['#fff0a8', '#ffffff'].map(hex), blossomChance: 0.5,
+       flowers: ['#ff6aa8', '#ffd35a', '#ffffff', '#8ad8ff', '#c89cf0'].map(hex), rock: hex('#e8b8d0'), crystal: ['#ff9ae8'].map(hex), stone: hex('#f4d8e4'),
+       grass: [hex('#e88ab0'), hex('#ffd0e4')] },
   5: { foliage: ['#8a4a3a'].map(hex), blossom: ['#ff7a45'].map(hex), blossomChance: 0,
        flowers: ['#ffb060'].map(hex), rock: hex('#3a3238'), crystal: ['#ff7a45'].map(hex), stone: hex('#4a4048'),
        grass: [hex('#4a2a2a'), hex('#a05a3a')] },
 };
 
-const WIND = { marigold: 0.3, kandil: 0.04, diya: 0, boat: 0, tree: 0.035, palm: 0.05, bush: 0.07, flower: 0.35, rock: 0, cactus: 0.0, crystal: 0, shroom: 0.05, column: 0, brazier: 0, lamp: 0, flame: 0.2 };
-const EMIS = { kandil: 1.6, diya: 2.2, crystal: 0.9, shroom: 1.4, lamp: 0.0, flame: 3.0 };
+const WIND = { pine: 0.03, snowman: 0, tank: 0, dish: 0, marigold: 0.3, kandil: 0.04, diya: 0, boat: 0, tree: 0.035, palm: 0.05, bush: 0.07, flower: 0.35, rock: 0, cactus: 0.0, crystal: 0, shroom: 0.05, column: 0, brazier: 0, lamp: 0, flame: 0.2 };
+const EMIS = { kandil: 1.6, diya: 2.2, crystal: 0.9, shroom: 1.4, lamp: 1.3, flame: 3.0 };
 const FLOOR_TYPES = { clouds: 0, water: 1, sand: 2, nebula: 3, lava: 4 };
 
 export class World {
@@ -65,6 +74,7 @@ export class World {
     phys.reset();
     this.solids = [];
     this.bouncers = [];
+    this.crates = [];
     const cache = new Map();
     let seedN = 1;
     for (const s of data.solids) {
@@ -87,6 +97,11 @@ export class World {
         const key = `d${s.size.join(',')}${s.style}`;
         if (!cache.has(key)) cache.set(key, keep(M.buildDisc(r, s.size[0], s.size[1], colors, seedN++)));
         mesh = cache.get(key);
+      } else if (vis === 'building') {
+        mesh = keep(MH.buildBuilding(r, s.size, seedN++));
+      } else if (vis === 'crate') {
+        if (!cache.has('crate')) cache.set('crate', keep(MH.buildCrate(r)));
+        mesh = cache.get('crate');
       } else if (vis === 'bouncer') {
         const key = `bo${colors[0]}`;
         if (!cache.has(key)) cache.set(key, M.buildBouncer(r, colors[0]));
@@ -95,6 +110,8 @@ export class World {
       }
       const so = { s, id, mesh, offsetY, base: [...s.pos], cur: [...s.pos], move: s.move || null };
       if (vis === 'bouncer') this.bouncers[this.bouncers.length - 1].solid = so;
+      if (vis === 'building') so.emissive = [1.3, 1.3, 1.3];
+      if (vis === 'crate') { so.crate = { contains: s.visual.contains, alive: true, phase: this.crates.length * 1.9 }; this.crates.push(so); }
       this.solids.push(so);
     }
 
@@ -166,7 +183,14 @@ export class World {
     // ---- collectibles -----------------------------------------------------------------
     this.reptiles = game.character === 'manus';
     const sparkMesh = this.reptiles ? game.shared.lizard : game.shared.spark;
-    this.sparks = data.sparks.map((p, i) => ({ p, alive: true, phase: i * 0.7 }));
+    this.sparks = data.sparks.map((p, i) => ({ p: [...p], alive: true, phase: i * 0.7 }));
+    for (const c of this.crates) {
+      if (c.crate.contains !== 'sparks') continue;
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + c.crate.phase;
+        this.sparks.push({ p: [c.base[0] + Math.cos(a) * 0.9, c.base[1] + 0.9, c.base[2] + Math.sin(a) * 0.9], alive: false, phase: k * 2.1, crateId: c.id });
+      }
+    }
     this.sparkTotal = this.sparks.length;
     this.sparkBuf = new Float32Array(this.sparks.length * 8);
     this.sparkInst = r.createInstanced(sparkMesh, this.sparkBuf);
@@ -178,6 +202,9 @@ export class World {
 
     // ---- enemies & hazards ---------------------------------------------------------------
     this.enemies = data.enemies.map((e, i) => this.makeEnemy(e, i));
+    this.enemyTotal = this.enemies.length;
+    this.stomped = 0;
+    this.cratesSmashed = 0;
     this.lasers = data.lasers.map((l) => ({ ...l, angle: 0 }));
 
     this.time = 0;
@@ -306,6 +333,7 @@ export class World {
         if (hd < 0.95 && p[1] > np[1] - 0.5 && p[1] < np[1] + 1.1) {
           if ((player.vel[1] < -1 && p[1] > np[1] + 0.45) || player.pounding) {
             e.alive = false;
+            this.stomped++;
             fx.emit(fx.T.BURST, [np[0], np[1] + 0.5, np[2]], 26, [1.6, 0.5, 2.2], 7);
             fx.emit(fx.T.DUST, [np[0], np[1] + 0.2, np[2]], 10, [1, 0.8, 1.2], 3);
             out.push({ type: 'stomp', pos: np });
@@ -332,6 +360,7 @@ export class World {
         if (dd < 0.95) {
           if ((player.vel[1] < -1 && center[1] > e.pos[1] + 0.2) || player.pounding) {
             e.alive = false;
+            this.stomped++;
             fx.emit(fx.T.BURST, e.pos, 30, [0.8, 1.8, 2.4], 7);
             out.push({ type: 'stomp', pos: e.pos });
           } else if (invuln <= 0) {
@@ -371,6 +400,22 @@ export class World {
     return out;
   }
 
+  // Ground pound landed on body `id`: if it is a crate, break it open.
+  smashCrate(id) {
+    const c = this.crates.find((x) => x.id === id && x.crate.alive);
+    if (!c) return null;
+    const fx = this.g.native.fx;
+    c.crate.alive = false;
+    this.cratesSmashed++;
+    this.g.native.physics.setActive(c.id, false);
+    const pos = c.cur;
+    fx.emit(fx.T.BURST, pos, 26, [1.6, 1.0, 0.5], 8);
+    fx.emit(fx.T.DUST, [pos[0], pos[1] - 0.4, pos[2]], 14, [1.2, 1.0, 0.8], 5);
+    fx.emit(fx.T.CONFETTI, pos, 10, [1, 1, 1], 5);
+    for (const sp of this.sparks) if (sp.crateId === c.id) sp.alive = true;
+    return { contains: c.crate.contains, pos };
+  }
+
   onBounce(p) {
     let best = null, bd = 3;
     for (const b of this.bouncers) {
@@ -387,9 +432,14 @@ export class World {
     const t = this.time;
     const sh = this.g.shared;
     for (const so of this.solids) {
-      if (!so.mesh) continue;
+      if (!so.mesh || (so.crate && !so.crate.alive)) continue;
       const pos = so.offsetY ? [so.cur[0], so.cur[1] + so.offsetY, so.cur[2]] : so.cur;
-      r.draw({ mesh: so.mesh, model: m4.trs(pos), rim: 0.2, spec: 0.06 });
+      if (so.crate) {
+        const w = Math.sin(t * 2 + so.crate.phase) * 0.03;
+        r.draw({ mesh: so.mesh, model: m4.trs(pos, so.crate.phase, w, 0), rim: 0.35, spec: 0.1, outline: 0.9 });
+        continue;
+      }
+      r.draw({ mesh: so.mesh, model: m4.trs(pos), rim: 0.2, spec: 0.06, emissive: so.emissive });
     }
     for (const b of this.bouncers) {
       b.squash = Math.max(0, b.squash - dt * 3);

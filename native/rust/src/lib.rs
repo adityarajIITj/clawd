@@ -36,6 +36,9 @@ const BUFFER: f32 = 0.13;
 const POUND_V: f32 = -34.0;
 const POUND_HANG: f32 = 0.14;
 const STEP_UP: f32 = 0.32;
+const DASH_SPEED: f32 = 22.0;
+const DASH_TIME: f32 = 0.16;
+const DASH_COOLDOWN: f32 = 0.45;
 
 pub const EV_JUMP: u32 = 1;
 pub const EV_DJUMP: u32 = 2;
@@ -44,6 +47,7 @@ pub const EV_BOUNCE: u32 = 8;
 pub const EV_POUND: u32 = 16;
 pub const EV_POUND_LAND: u32 = 32;
 pub const EV_WALL: u32 = 64;
+pub const EV_DASH: u32 = 128;
 
 const MAX_BODIES: usize = 2048;
 
@@ -89,6 +93,9 @@ struct Player {
     air_time: f32,
     gscale: f32,
     speed_scale: f32,
+    dash_t: f32,
+    dash_cd: f32,
+    air_dashed: bool,
 }
 
 static mut WORLD: World = World { bodies: [EMPTY; MAX_BODIES], count: 0 };
@@ -108,6 +115,9 @@ static mut PLAYER: Player = Player {
     air_time: 0.0,
     gscale: 1.0,
     speed_scale: 1.0,
+    dash_t: 0.0,
+    dash_cd: 0.0,
+    air_dashed: false,
 };
 static mut STATE: [f32; 16] = [0.0; 16];
 
@@ -210,6 +220,9 @@ pub extern "C" fn player_reset(x: f32, y: f32, z: f32) {
         p.buffer = 0.0;
         p.coyote = 0.0;
         p.air_time = 0.0;
+        p.dash_t = 0.0;
+        p.dash_cd = 0.0;
+        p.air_dashed = false;
         write_state();
     }
 }
@@ -234,6 +247,8 @@ pub extern "C" fn player_bounce(vy: f32) {
         p.jumps = 1;
         p.can_cut = false;
         p.coyote = 0.0;
+        p.dash_t = 0.0;
+        p.air_dashed = false;
         write_state();
     }
 }
@@ -243,6 +258,7 @@ pub extern "C" fn player_knock(vx: f32, vy: f32, vz: f32) {
     unsafe {
         let p = &mut PLAYER;
         p.vel = [vx, vy, vz];
+        p.dash_t = 0.0;
         p.grounded = false;
         p.ground_id = -1;
         p.pounding = false;
@@ -273,6 +289,8 @@ unsafe fn write_state() {
     STATE[11] = p.land_speed;
     STATE[12] = p.air_time;
     STATE[13] = if p.ground_id >= 0 { WORLD.bodies[p.ground_id as usize].kind as f32 } else { -1.0 };
+    STATE[14] = p.dash_t;
+    STATE[15] = p.dash_cd;
 }
 
 fn approach2(v: &mut [f32; 3], tx: f32, tz: f32, maxd: f32) {
@@ -291,11 +309,11 @@ fn approach2(v: &mut [f32; 3], tx: f32, tz: f32, maxd: f32) {
 /// One fixed controller tick. `ix, iz` is the desired move direction in world
 /// space (magnitude <= 1). Returns a bitmask of EV_* events for audio/VFX.
 #[no_mangle]
-pub extern "C" fn player_step(dt: f32, ix: f32, iz: f32, jump_held: u32, jump_pressed: u32, pound_pressed: u32) -> u32 {
-    unsafe { step(dt, ix, iz, jump_held != 0, jump_pressed != 0, pound_pressed != 0) }
+pub extern "C" fn player_step(dt: f32, ix: f32, iz: f32, jump_held: u32, jump_pressed: u32, pound_pressed: u32, dash_pressed: u32) -> u32 {
+    unsafe { step(dt, ix, iz, jump_held != 0, jump_pressed != 0, pound_pressed != 0, dash_pressed != 0) }
 }
 
-unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed: bool, pound_pressed: bool) -> u32 {
+unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed: bool, pound_pressed: bool, dash_pressed: bool) -> u32 {
     let mut ev = 0u32;
     let p = &mut PLAYER;
 
@@ -320,7 +338,40 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
         ix /= len;
         iz /= len;
     }
-    if !p.pounding {
+    // ---- dash: a short burst in the held (or facing) direction; one per airtime ----
+    p.dash_cd = (p.dash_cd - dt).max(0.0);
+    if p.grounded {
+        p.air_dashed = false;
+    }
+    if dash_pressed && p.dash_cd <= 0.0 && !p.pounding && (p.grounded || !p.air_dashed) {
+        let (dx, dz) = if len > 0.1 { (ix, iz) } else { (p.facing.sin(), p.facing.cos()) };
+        p.vel[0] = dx * DASH_SPEED;
+        p.vel[2] = dz * DASH_SPEED;
+        p.vel[1] = 0.0;
+        p.facing = dx.atan2(dz);
+        p.dash_t = DASH_TIME;
+        p.dash_cd = DASH_COOLDOWN;
+        p.can_cut = false;
+        if !p.grounded {
+            p.air_dashed = true;
+        }
+        ev |= EV_DASH;
+    }
+    let dashing = p.dash_t > 0.0;
+    if dashing {
+        p.dash_t -= dt;
+        if p.dash_t <= 0.0 {
+            // bleed off the burst so control returns smoothly
+            let max = MAX_SPEED * p.speed_scale * 1.15;
+            let h = (p.vel[0] * p.vel[0] + p.vel[2] * p.vel[2]).sqrt();
+            if h > max {
+                p.vel[0] *= max / h;
+                p.vel[2] *= max / h;
+            }
+        }
+    }
+
+    if !p.pounding && !dashing {
         let max = MAX_SPEED * p.speed_scale;
         let (tx, tz) = (ix * max, iz * max);
         let rate = if len > 0.05 {
@@ -370,6 +421,7 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
     // ---- ground pound ------------------------------------------------------------
     if pound_pressed && !p.grounded && !p.pounding && p.air_time > 0.08 {
         p.pounding = true;
+        p.dash_t = 0.0;
         p.hang = POUND_HANG;
         p.vel = [0.0; 3];
         p.can_cut = false;
@@ -384,6 +436,8 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
         } else {
             p.vel[1] = POUND_V;
         }
+    } else if dashing && !jumped_now(ev) {
+        p.vel[1] = 0.0;
     } else {
         let g = GRAVITY * p.gscale * if p.vel[1] < 0.0 { FALL_MULT } else { 1.0 };
         p.vel[1] -= g * dt;
@@ -454,6 +508,10 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
 
     write_state();
     ev
+}
+
+fn jumped_now(ev: u32) -> bool {
+    ev & (EV_JUMP | EV_DJUMP) != 0
 }
 
 /// Downward probe for snapping; returns body id and its top.

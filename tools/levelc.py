@@ -28,6 +28,9 @@ MAX_SPEED = 9.0
 JUMP_V = 14.0
 DJUMP_V = 12.5
 P_RADIUS = 0.45
+DASH_BONUS = 2.6  # conservative extra reach from the air dash
+
+QUEST_IDS = {"all_sparks", "tokens", "no_hurt", "par", "stomp_all", "crates"}
 
 
 def hexc(h: str) -> list[float]:
@@ -56,6 +59,10 @@ STYLES: dict[str, dict[str, list[float]]] = {
     "beach":    {"top": hexc("f2d9a8"), "side": hexc("c4643f"), "rock": hexc("963f2c")},
     "lakeshore":{"top": hexc("4f8a5a"), "side": hexc("8a5a44"), "rock": hexc("5a3a34")},
     "lotus":    {"top": hexc("f2a6c0"), "side": hexc("5f9a5a"), "rock": hexc("3f6a3f")},
+    "ice":      {"top": hexc("e6eefa"), "side": hexc("bcd8f0"), "rock": hexc("7fa6d0")},
+    "taxi":     {"top": hexc("f2c230"), "side": hexc("1c1c20"), "rock": hexc("101014")},
+    "rooftop":  {"top": hexc("8a8f9a"), "side": hexc("4a4f60"), "rock": hexc("2a2e3c")},
+    "candy":    {"top": hexc("ffe1ee"), "side": hexc("ff9ac0"), "rock": hexc("c86a9a")},
     "cloud":    {"top": hexc("fff6ea"), "side": hexc("f2e3d0"), "rock": hexc("e6d2bd")},
 }
 
@@ -69,9 +76,12 @@ DECOR_PRESETS: dict[str, list[tuple[str, float, float, float]]] = {
     "sahyadri": [("tree", 3, 0.9, 1.5), ("bush", 3, 0.8, 1.3), ("marigold", 2, 0.9, 1.2), ("rock", 3, 0.6, 1.3), ("flower", 2, 0.8, 1.2)],
     "konkan":  [("palm", 4, 0.9, 1.4), ("bush", 2, 0.8, 1.2), ("marigold", 1, 0.9, 1.1), ("rock", 2, 0.6, 1.1)],
     "festival": [("kandil", 1.5, 0.9, 1.1), ("diya", 3, 0.9, 1.3), ("marigold", 3, 0.9, 1.3), ("tree", 1, 0.9, 1.2), ("bush", 1, 0.8, 1.1)],
+    "frost":   [("pine", 4, 0.9, 1.5), ("crystal", 2, 0.6, 1.2), ("rock", 2, 0.6, 1.2), ("snowman", 0.6, 1.0, 1.15)],
+    "city":    [("tank", 2, 0.9, 1.2), ("dish", 2, 0.9, 1.2), ("lamp", 2, 1.0, 1.0)],
+    "candy":   [("tree", 2, 0.9, 1.3), ("flower", 5, 0.9, 1.4), ("bush", 2, 0.8, 1.2)],
     "none": [],
 }
-COLLIDE_DECOR = {"tree": 0.35, "palm": 0.3, "cactus": 0.4, "column": 0.55, "brazier": 0.45}
+COLLIDE_DECOR = {"tree": 0.35, "palm": 0.3, "cactus": 0.4, "column": 0.55, "brazier": 0.45, "pine": 0.3, "tank": 0.6, "snowman": 0.4}
 
 
 class LintError(Exception):
@@ -118,6 +128,7 @@ class Compiler:
         self.grass: list[dict] = []
         self.warnings: list[str] = []
         self.keepouts: list[tuple[float, float, float]] = []  # x, z, radius
+        self.crates: list[str] = []
 
     # -- helpers ---------------------------------------------------------
     def style(self, name: str) -> dict:
@@ -203,6 +214,16 @@ class Compiler:
         self.add_solid("cyl", [x, y - h / 2, z], [r, h / 2], e.get("style", "stone"),
                        move=e.get("move"), kind=e.get("kind", "solid"), power=e.get("power", 0.0),
                        visual={"type": e.get("visual", "disc")})
+
+    def crate(self, e: dict):
+        """Smashable crate (ground pound). pos = point on the surface it sits on."""
+        x, y, z = e["pos"]
+        contains = e.get("contains", "sparks")
+        if contains not in ("sparks", "heart"):
+            raise LintError(f"crate contains '{contains}'? use sparks or heart")
+        self.add_solid("box", [x, y + 0.6, z], [0.6, 0.6, 0.6], "wood", visual={"type": "crate", "contains": contains})
+        self.keepouts.append((x, z, 1.8))
+        self.crates.append(contains)
 
     def bouncer(self, e: dict):
         x, y, z = e["pos"]
@@ -300,7 +321,7 @@ class Compiler:
                 rad = math.sqrt(self.rng.random()) * r * 0.86
                 px, pz = x + math.cos(ang) * rad, z + math.sin(ang) * rad
                 mesh, _, s0, s1 = self.rng.choices(preset, weights)[0]
-                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6, "kandil": 2.4}.get(mesh, 1.0)
+                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6, "kandil": 2.4, "pine": 2.4, "tank": 2.8, "dish": 1.8, "snowman": 2.0}.get(mesh, 1.0)
                 # big collidable things stay on the outer ring so the centre path is clear
                 if mesh in COLLIDE_DECOR and rad < r * 0.5:
                     continue
@@ -375,7 +396,7 @@ class Compiler:
                     apex = a["power"] ** 2 / (2 * GRAVITY) + DJUMP_V ** 2 / (2 * GRAVITY)
                     ok = dy <= apex and gap <= 14
                 else:
-                    ok = dy <= 4.3 and gap <= reach(dy) * 0.92 + P_RADIUS
+                    ok = dy <= 4.3 and gap <= reach(dy) * 0.92 + P_RADIUS + DASH_BONUS
                 if ok or gap <= 0:
                     seen.add(b["i"])
                     q.append(b)
@@ -421,6 +442,8 @@ class Compiler:
             self.bouncer(e)
         for e in S.get("path", []):
             self.path(e)
+        for e in S.get("crate", []):
+            self.crate(e)
         for e in S.get("spiral", []):
             self.spiral(e)
         for e in S.get("sparks", []):
@@ -435,6 +458,15 @@ class Compiler:
                                "seed": d.get("seed", 1), **({"size": d["size"]} if "size" in d else {})})
 
         reach_n, total_n = self.lint(spawn, goal)
+
+        quests = L.get("quests", ["all_sparks", "tokens", "no_hurt"])
+        bad = [q for q in quests if q not in QUEST_IDS]
+        if bad or len(quests) != 3:
+            raise LintError(f"quests must be 3 of {sorted(QUEST_IDS)} (got {quests})")
+        if "crates" in quests and not self.crates:
+            raise LintError("quest 'crates' needs at least one [[crate]]")
+        if "stomp_all" in quests and not S.get("enemy"):
+            raise LintError("quest 'stomp_all' needs at least one [[enemy]]")
 
         theme = dict(S["theme"])
         for k, v in list(theme.items()):
@@ -453,6 +485,9 @@ class Compiler:
             "goal": goal,
             "killY": L.get("killY", theme.get("floorY", -30) - 4),
             "parTime": L.get("parTime", 120),
+            "quests": quests,
+            "crateCount": len(self.crates),
+            "sparkTotal": len(self.sparks) + 3 * self.crates.count("sparks"),
             "theme": theme,
             "solids": self.solids,
             "sparks": [[round(v, 2) for v in s] for s in self.sparks],
@@ -464,7 +499,7 @@ class Compiler:
             "decor": self.decor,
             "grass": self.grass,
         }
-        stats = (f"{len(self.solids):3d} solids  {len(self.sparks):3d} sparks  {len(out['tokens'])} tokens  "
+        stats = (f"{len(self.solids):3d} solids  {out['sparkTotal']:3d} sparks  {len(self.crates)} crates  {len(out['tokens'])} tokens  "
                  f"{len(self.decor):3d} decor  {len(out['enemies'])} enemies  nav {reach_n}/{total_n}")
         return out, stats
 
@@ -487,7 +522,7 @@ def main() -> int:
         (out_dir / f"{f.stem}.json").write_text(json.dumps(lvl, separators=(",", ":")), encoding="utf-8")
         manifest.append({"id": lvl["id"], "campaign": lvl["campaign"], "file": f"{f.stem}.json", "name": lvl["name"], "subtitle": lvl["subtitle"],
                          "theme": {k: lvl["theme"][k] for k in ("skyTop", "skyHorizon", "accent") if k in lvl["theme"]},
-                         "sparks": len(lvl["sparks"]), "parTime": lvl["parTime"]})
+                         "sparks": lvl["sparkTotal"], "parTime": lvl["parTime"], "quests": lvl["quests"]})
         print(f"  [level] {f.stem:22s} {stats}")
         for w in comp.warnings:
             print(f"          warn: {w}")

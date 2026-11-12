@@ -1,0 +1,332 @@
+# ============================================================================
+#  MAHARASHTRA TALES · WORLD 4 — MUMBAI NIGHTS
+#  Rooftop hopping over Marine Drive. Water tanks, dish antennas, kaali-peelis.
+# ============================================================================
+[level]
+id = 10
+campaign = "manus"
+name = "Mumbai Nights"
+subtitle = "The city that never sleeps, seen from its rooftops"
+story = "The last local has left and Marine Drive is glowing like a necklace. Up on the rooftops, between water tanks and dish antennas, the city's night lizards come out to play. Hop the kaali-peeli taxis and mind the gap."
+music = "sahyadri"
+quests = ["all_sparks", "crates", "par"]
+seed = 1010
+spawn = [0, 10.5, 0]
+goal = [40, 22, 108]
+parTime = 130
+
+[theme]
+skyTop = "#0a1030"
+skyHorizon = "#6a445e"
+skyBottom = "#1a1838"
+sunColor = "#c8d4ff"
+sunDir = [-0.4, 0.6, 0.4]
+sunIntensity = 1.5
+ambSky = "#6a78b8"
+ambGround = "#8a6858"
+fogColor = "#2a2648"
+fogDensity = 0.0065
+floor = "water"
+floorY = -6
+floorColor = "#28407a"
+floorColor2 = "#0a1230"
+clouds = 0
+stars = 0.6
+bloom = 1.0
+exposure = 1.05
+saturation = 1.08
+contrast = 1.03
+particles = "mote"
+particleColor = "#ffd890"
+accent = "#ffcf5a"
+wind = [0.3, 0.1]
+
+# ---- rooftops (pos = roof centre, size = full width / height / depth) ----
+[[block]]
+pos = [0, 10, 0]
+size = [14, 30, 14]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [0, 11, 34]
+size = [12, 34, 12]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [0, 12, 54]
+size = [12, 36, 12]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [29, 15, 60]
+size = [12, 40, 12]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [40, 23, 72]
+size = [10, 48, 10]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [40, 22, 106]
+size = [14, 46, 14]
+visual = "building"
+style = "rooftop"
+
+# skyline
+[[block]]
+pos = [-30, 18, 40]
+size = [16, 40, 16]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [70, 26, 60]
+size = [18, 50, 18]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [-25, 14, 90]
+size = [14, 36, 14]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [75, 20, 115]
+size = [16, 44, 16]
+visual = "building"
+style = "rooftop"
+
+[[block]]
+pos = [15, 30, 140]
+size = [20, 56, 20]
+visual = "building"
+style = "rooftop"
+
+# kaali-peeli taxis
+[[path]]
+from = [0, 10, 11]
+to = [0, 10, 23]
+count = 3
+shape = "block"
+size = [2.4, 1.0, 4]
+style = "taxi"
+move = { type = "line", axis = [1, 0, 0], amp = 2.5, speed = 1.2 }
+alternate = true
+
+[[path]]
+from = [9, 12.5, 56]
+to = [19, 14, 58]
+count = 3
+radius = 1.5
+style = "rooftop"
+
+# the sea link
+[[path]]
+from = [40, 23, 81]
+to = [40, 22, 95]
+count = 4
+shape = "block"
+size = [3, 0.6, 3]
+style = "rooftop"
+
+[[block]]
+pos = [-10, 13, 34]
+size = [2.5, 1, 2.5]
+style = "taxi"
+
+[[block]]
+pos = [8, 14.5, 44]
+size = [2.5, 1, 2.5]
+style = "taxi"
+
+[[disc]]
+pos = [48, 29, 112]
+radius = 1.8
+style = "rooftop"
+
+[[bouncer]]
+pos = [32, 15, 63]
+power = 24
+
+[[bouncer]]
+pos = [44, 22, 109]
+power = 22
+
+[[crate]]
+pos = [3, 11, 31]
+contains = "sparks"
+
+[[crate]]
+pos = [-3, 12, 57]
+contains = "sparks"
+
+[[crate]]
+pos = [3, 12, 52]
+contains = "heart"
+
+[[crate]]
+pos = [42, 23, 70]
+contains = "sparks"
+
+[[sparks]]
+type = "ring"
+center = [0, 11.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 12.2, 34]
+radius = 4
+count = 7
+
+[[sparks]]
+type = "arc"
+from = [0, 13.5, 41]
+to = [0, 14, 47]
+height = 2
+count = 5
+
+[[sparks]]
+type = "ring"
+center = [29, 16.2, 60]
+radius = 4
+count = 7
+
+[[sparks]]
+type = "column"
+pos = [32, 17, 63]
+count = 6
+step = 1.3
+
+[[sparks]]
+type = "ring"
+center = [40, 23.2, 106]
+radius = 4.5
+count = 8
+
+[[token]]
+pos = [-10, 13.8, 34]
+
+[[token]]
+pos = [8, 15.3, 44]
+
+[[token]]
+pos = [48, 29.8, 112]
+
+[[checkpoint]]
+pos = [-3, 11, 32]
+
+[[checkpoint]]
+pos = [27, 15, 57]
+
+[[checkpoint]]
+pos = [38, 23, 74]
+
+[[enemy]]
+type = "glitchling"
+a = [-4, 11, 37]
+b = [4, 11, 37]
+speed = 2.0
+
+[[enemy]]
+type = "glitchling"
+a = [26, 15, 63]
+b = [26, 15, 57]
+speed = 2.0
+
+[[hint]]
+pos = [0, 10, 0]
+radius = 5
+text = "Mumbai from the rooftops. The taxis below make fine stepping stones"
+
+[[hint]]
+pos = [0, 11, 38]
+radius = 3
+text = "Mind the gap — double jump, then <b>dash</b> across"
+
+# rooftop clutter
+[[decor]]
+mesh = "tank"
+pos = [-4.5, 10, -4]
+rot = 0.3
+scale = 1.2
+
+[[decor]]
+mesh = "dish"
+pos = [4.5, 10, -4.5]
+rot = 2.2
+scale = 1.2
+
+[[decor]]
+mesh = "lamp"
+pos = [5.5, 10, 5.5]
+rot = 0
+scale = 1.0
+
+[[decor]]
+mesh = "tank"
+pos = [4, 11, 38]
+rot = 1.1
+scale = 1.1
+
+[[decor]]
+mesh = "lamp"
+pos = [-5, 11, 29.5]
+rot = 0
+scale = 1.0
+
+[[decor]]
+mesh = "dish"
+pos = [-4, 12, 50]
+rot = 0.8
+scale = 1.1
+
+[[decor]]
+mesh = "lamp"
+pos = [5, 12, 58.5]
+rot = 0
+scale = 1.0
+
+[[decor]]
+mesh = "tank"
+pos = [33, 15, 56]
+rot = 0.5
+scale = 1.2
+
+[[decor]]
+mesh = "dish"
+pos = [25, 15, 64]
+rot = 3.0
+scale = 1.1
+
+[[decor]]
+mesh = "lamp"
+pos = [44, 23, 76]
+rot = 0
+scale = 1.0
+
+[[decor]]
+mesh = "tank"
+pos = [35, 22, 102]
+rot = 0.2
+scale = 1.3
+
+[[decor]]
+mesh = "dish"
+pos = [45.5, 22, 101]
+rot = 1.4
+scale = 1.2
+
+[[decor]]
+mesh = "lamp"
+pos = [34.5, 22, 111.5]
+rot = 0
+scale = 1.0

@@ -9,6 +9,7 @@ name = "Kandil Lake"
 subtitle = "Lanterns on the water, and the night is warm"
 story = "It's festival night. Akash kandils glow on every pole, diyas drift across the lake, and fireflies have joined the celebration. One last climb up to the old temple on the hill — and then, finally, rest."
 music = "kandil"
+quests = ["all_sparks", "tokens", "no_hurt"]
 seed = 8808
 spawn = [0, 1.5, 0]
 goal = [0, 9, 93]
@@ -201,3 +202,9 @@ text = "Festival night. The lanterns will light your way"
 pos = [0, 1.5, 40]
 radius = 3
 text = "Ride the drifting lotus leaves — they're in no hurry either"
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [-3, 1.5, 32]
+contains = "sparks"
+

@@ -9,6 +9,7 @@ name = "Sahyadri Monsoon"
 subtitle = "Rain on the ghats, and nowhere you need to be"
 story = "The first rains have reached the Sahyadris. Mist rolls over the old fort walls and every rock is busy with little lizards. Marathi Manus pockets his phone, ties up his bun, and heads uphill — slowly, because the monsoon is meant to be enjoyed."
 music = "sahyadri"
+quests = ["all_sparks", "tokens", "crates"]
 seed = 6606
 spawn = [0, 0.5, 0]
 goal = [-14, 6, 93]
@@ -247,3 +248,22 @@ mesh = "waterfall"
 pos = [27, 19.8, 80]
 rot = -1.57
 size = [8, 44]
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [4, 0, 4]
+contains = "sparks"
+
+[[crate]]
+pos = [-3, 2, 32]
+contains = "sparks"
+
+[[crate]]
+pos = [8, 7, 48]
+contains = "heart"
+
+[[hint]]
+pos = [4, 0, 4]
+radius = 2.6
+text = "Old supply crates from the fort. <b>Ground pound</b> on top to smash them"
+

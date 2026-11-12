@@ -11,6 +11,7 @@ export class TouchControls {
     this.jumpHeld = false;
     this.jumpPressed = false;
     this.poundPressed = false;
+    this.dashPressed = false;
     this.pausePressed = false;
     this.stick = null;   // { id, ox, oy }
     this.cam = null;     // { id, x, y }
@@ -26,6 +27,8 @@ export class TouchControls {
         <svg viewBox="0 0 24 24"><path d="M12 4 L20 14 H15 V20 H9 V14 H4 Z"/></svg></button>
       <button class="t-btn t-pound" aria-label="Ground pound">
         <svg viewBox="0 0 24 24"><path d="M12 20 L4 10 H9 V4 H15 V10 H20 Z"/></svg></button>
+      <button class="t-btn t-dash" aria-label="Dash">
+        <svg viewBox="0 0 24 24"><path d="M3 7 H11 V9 H3 Z M2 11 H10 V13 H2 Z M3 15 H11 V17 H3 Z M12 5 L22 12 L12 19 Z"/></svg></button>
       <button class="t-btn t-pause" aria-label="Pause">
         <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg></button>`;
     root.insertBefore(el, root.querySelector('#screen'));
@@ -50,6 +53,7 @@ export class TouchControls {
     };
     bindBtn('.t-jump', () => { this.jumpHeld = true; this.jumpPressed = true; }, () => { this.jumpHeld = false; });
     bindBtn('.t-pound', () => { this.poundPressed = true; });
+    bindBtn('.t-dash', () => { this.dashPressed = true; });
     bindBtn('.t-pause', () => { this.pausePressed = true; });
     el.addEventListener('contextmenu', (e) => e.preventDefault());
   }
@@ -127,9 +131,9 @@ export class TouchControls {
   take() {
     const out = {
       mx: this.mx, mz: this.mz, jumpHeld: this.jumpHeld, jump: this.jumpPressed,
-      pound: this.poundPressed, pause: this.pausePressed, camDX: this.camDX, camDY: this.camDY,
+      pound: this.poundPressed, dash: this.dashPressed, pause: this.pausePressed, camDX: this.camDX, camDY: this.camDY,
     };
-    this.jumpPressed = this.poundPressed = this.pausePressed = false;
+    this.jumpPressed = this.poundPressed = this.dashPressed = this.pausePressed = false;
     this.camDX = this.camDY = 0;
     return out;
   }

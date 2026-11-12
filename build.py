@@ -9,7 +9,8 @@ Pipeline:
     native/cpp/fx.cpp      --clang++ (wasm32, freestanding)-->  dist/wasm/fx.wasm
     native/rust            --cargo (wasm32-unknown-unknown)-->  dist/wasm/clawd_core.wasm
     levels/*.toml          --tools/levelc.py (compile+lint)-->  dist/levels/*.json
-    tools/audiogen.py      --procedural synthesis---------->  dist/audio/*.wav
+    tools/audiogen.py      --procedural SFX synthesis------>  dist/audio/sfx_*.wav
+    assets/music/*.mp3     --copy (author's own soundtrack)-->  dist/audio/
     web/                   --copy-------------------------->  dist/
 """
 from __future__ import annotations
@@ -80,9 +81,9 @@ def build_levels() -> None:
 
 
 def build_audio(force: bool) -> None:
-    step("Soundtrack + SFX  ->  procedural synthesis")
+    step("Sound effects  ->  procedural synthesis")
     out = DIST / "audio"
-    marker = out / "music_citadel.wav"
+    marker = out / "sfx_quest.wav"
     src = ROOT / "tools/audiogen.py"
     if not force and marker.exists() and marker.stat().st_mtime > src.stat().st_mtime:
         print("  ✓ up to date (use --audio to force)")
@@ -91,11 +92,11 @@ def build_audio(force: bool) -> None:
 
 
 def copy_music() -> None:
-    step("Marathi Manus music  ->  dist/audio (author's own MP3s)")
+    step("Soundtrack  ->  dist/audio (author's own MP3s)")
     out = DIST / "audio"
     out.mkdir(parents=True, exist_ok=True)
-    for stale in ("manus", "sahyadri", "konkan", "kandil"):
-        (out / f"music_{stale}.wav").unlink(missing_ok=True)
+    for stale in out.glob("music_*.wav"):  # the old generated soundtrack
+        stale.unlink()
     n = 0
     for f in sorted((ROOT / "assets" / "music").glob("*.mp3")):
         shutil.copy2(f, out / f.name)

@@ -32,6 +32,7 @@ export class Clawd {
 
   onEvents(ev, EV, landSpeed) {
     if (ev & EV.JUMP) { this.sqV += 7; }
+    if (ev & EV.DASH) { this.dashT = 0.24; this.sqV -= 4; }
     if (ev & EV.DJUMP) { this.flipT = 0.42; this.sqV += 5; }
     if (ev & EV.BOUNCE) { this.sq = 0.6; this.sqV = 14; this.flipT = 0.5; }
     if (ev & EV.LAND) {
@@ -79,6 +80,7 @@ export class Clawd {
     this.blink = this.blinkT < 0.12 ? 0.12 : 1;
 
     if (this.flash > 0) this.flash -= dt;
+    this.dashT = Math.max(0, (this.dashT || 0) - dt);
     if (this.dance) {
       this.yaw += dt * 3.0;
       const hop = Math.abs(Math.sin(t * 6));
@@ -96,7 +98,8 @@ export class Clawd {
     const sxz = 1 / Math.sqrt(Math.max(0.3, sy));
     const bob = this.grounded ? Math.abs(Math.sin(this.walk)) * 0.07 * clamp(hs / 6, 0, 1) : 0;
     const base = [this.pos[0], this.pos[1] + CENTER * sy + bob + (this.danceHop || 0), this.pos[2]];
-    const root = m4.trs(base, this.yaw + this.spin, this.lean + this.flip, 0, [sxz, sy, sxz]);
+    const dashLean = (this.dashT || 0) > 0 ? 0.5 : 0;
+    const root = m4.trs(base, this.yaw + this.spin, this.lean + this.flip + dashLean, 0, [sxz, sy, sxz * (1 + dashLean * 0.3)]);
     const flash = Math.max(0, this.flash) * 3;
     const put = (mesh, local, opts = {}) => {
       r.draw({ mesh, model: m4.mul(root, local), outline: opts.outline || 0, emissive: opts.emissive, rim: opts.rim ?? 0.45, flash, spec: opts.spec ?? 0.22 });
@@ -147,7 +150,8 @@ export class Manus extends Clawd {
     const sxz = 1 / Math.sqrt(Math.max(0.3, sy));
     const bob = this.grounded ? Math.abs(Math.sin(this.walk)) * 0.06 * run : 0;
     const base = [this.pos[0], this.pos[1] + 0.65 * sy + bob + (this.danceHop || 0), this.pos[2]];
-    const root = m4.trs(base, this.yaw + this.spin, this.lean * 0.6 + this.flip, 0, [sxz * 0.95, sy * 0.95, sxz * 0.95]);
+    const dashing = (this.dashT || 0) > 0;
+    const root = m4.trs(base, this.yaw + this.spin, this.lean * 0.6 + this.flip + (dashing ? 0.55 : 0), 0, [sxz * 0.95, sy * 0.95, sxz * 0.95]);
     const flash = Math.max(0, this.flash) * 3;
     const put = (mesh, local, opts = {}) => r.draw({ mesh, model: m4.mul(root, local), outline: opts.outline || 0, rim: opts.rim ?? 0.4, flash, spec: opts.spec ?? 0.15 });
 
@@ -175,6 +179,7 @@ export class Manus extends Clawd {
       let roll = s * 0.1 - s * this.armLift * 0.9;
       let yaw = 0;
       if (this.pounding) { pitch = -2.6; roll = -s * 0.3; }
+      if (dashing) { pitch = 1.25; roll = s * 0.25; }
       if (this.dance) { pitch = -2.4 + Math.sin(t * 9 + s) * 0.5; roll = -s * (0.5 + Math.sin(t * 7 + s) * 0.3); }
       if (s < 0 && bunFix) { pitch = -2.7; roll = 0.5 + Math.sin(t * 10) * 0.12; }
       if (s > 0 && selfie) { pitch = -1.7; roll = 0.35; yaw = -0.4; }

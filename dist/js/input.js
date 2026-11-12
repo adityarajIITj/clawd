@@ -23,6 +23,7 @@ export class Input {
     addEventListener('keyup', (e) => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
     canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 2) { this.pressed.add('MouseRight'); e.preventDefault(); return; }
       this.dragging = true;
       if (this.wantLock && !this.locked && !this.touch?.enabled) canvas.requestPointerLock?.();
       e.preventDefault();
@@ -54,7 +55,8 @@ export class Input {
     if (k.has('KeyD') || k.has('ArrowRight')) mx += 1;
     let jumpHeld = k.has('Space');
     let jump = p.has('Space');
-    let pound = p.has('ShiftLeft') || p.has('ShiftRight') || p.has('KeyC') || p.has('ControlLeft');
+    let pound = p.has('ShiftLeft') || p.has('ShiftRight') || p.has('KeyC');
+    let dash = p.has('KeyF') || p.has('MouseRight');
     let pause = p.has('Escape') || p.has('KeyP');
     let confirm = p.has('Enter') || p.has('Space');
     let camX = 0, camY = 0;
@@ -74,7 +76,8 @@ export class Input {
       const edge = (i) => b(i) && !this.padPrev[i];
       if (b(0)) jumpHeld = true;
       if (edge(0)) { jump = true; confirm = true; this.lastDevice = 'pad'; }
-      if (edge(2) || edge(6) || edge(7) || edge(1)) pound = true;
+      if (edge(2) || edge(6) || edge(7)) pound = true;
+      if (edge(1) || edge(5)) dash = true;
       if (edge(9)) pause = true;
       for (let i = 0; i < gp.buttons.length; i++) this.padPrev[i] = b(i);
       break;
@@ -85,6 +88,7 @@ export class Input {
       if (t.jumpHeld) jumpHeld = true;
       if (t.jump) jump = true;
       if (t.pound) pound = true;
+      if (t.dash) dash = true;
       if (t.pause) pause = true;
       this.mouseDX += t.camDX; this.mouseDY += t.camDY;
     }
@@ -92,7 +96,7 @@ export class Input {
     if (len > 1) { mx /= len; mz /= len; }
 
     const snap = {
-      mx, mz, jump, jumpHeld, pound, pause, confirm,
+      mx, mz, jump, jumpHeld, pound, dash, pause, confirm,
       camX, camY,
       mouseDX: this.mouseDX, mouseDY: this.mouseDY, wheel: this.wheel,
     };

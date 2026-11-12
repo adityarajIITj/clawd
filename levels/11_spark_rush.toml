@@ -1,0 +1,254 @@
+# ============================================================================
+#  BONUS WORLD — SPARK RUSH
+#  Unlocked with quest stars. No enemies: just speed, springs and the dash.
+# ============================================================================
+[level]
+id = 11
+campaign = "bonus"
+name = "Spark Rush"
+subtitle = "A victory lap for the truly dedicated"
+story = "You earned this one. A sugar-pink sky, more to collect than anyone can count, and nothing trying to stop you except the clock. Run fast, bounce high, dash far."
+music = "konkan"
+quests = ["all_sparks", "par", "no_hurt"]
+seed = 1111
+spawn = [0, 0.5, 0]
+goal = [10, 21, 151]
+parTime = 80
+
+[theme]
+skyTop = "#7a5ad8"
+skyHorizon = "#ffb0d0"
+skyBottom = "#ffe0ec"
+sunColor = "#fff0e0"
+sunDir = [-0.5, 0.5, 0.5]
+sunIntensity = 2.3
+ambSky = "#d8b8f0"
+ambGround = "#f0a8c0"
+fogColor = "#ffd0e4"
+fogDensity = 0.005
+floor = "clouds"
+floorY = -16
+floorColor = "#fff0f6"
+floorColor2 = "#f4a8cc"
+clouds = 0.6
+stars = 0
+bloom = 0.7
+exposure = 1.0
+saturation = 1.12
+contrast = 1.04
+particles = "mote"
+particleColor = "#ffffff"
+accent = "#ff6aa8"
+wind = [0.5, 0.3]
+
+[[island]]
+pos = [0, 0, 0]
+radius = 7
+style = "candy"
+decor = "candy"
+
+[[island]]
+pos = [0, 1, 40]
+radius = 6
+style = "candy"
+decor = "candy"
+density = 0.6
+
+[[island]]
+pos = [0, 10, 54]
+radius = 5
+style = "cloud"
+decor = "candy"
+density = 0.4
+
+[[island]]
+pos = [0, 10, 75]
+radius = 6
+style = "candy"
+decor = "candy"
+density = 0.6
+
+[[island]]
+pos = [0, 11, 104]
+radius = 6
+style = "cloud"
+decor = "candy"
+density = 0.5
+
+[[island]]
+pos = [10, 20, 114]
+radius = 5
+style = "candy"
+decor = "candy"
+density = 0.5
+
+[[island]]
+pos = [10, 21, 148]
+radius = 7
+style = "candy"
+decor = "candy"
+density = 0.6
+
+# scenery
+[[island]]
+pos = [-40, 10, 60]
+radius = 12
+style = "candy"
+decor = "candy"
+density = 0.4
+
+[[island]]
+pos = [55, 24, 90]
+radius = 14
+style = "cloud"
+decor = "candy"
+density = 0.4
+
+[[path]]
+from = [0, 0.5, 11]
+to = [0, 0.5, 29]
+count = 4
+radius = 1.5
+style = "candy"
+
+[[disc]]
+pos = [6, 4, 20]
+radius = 1.5
+style = "cloud"
+
+[[disc]]
+pos = [-9, 12, 56]
+radius = 1.6
+style = "cloud"
+
+# orbiting pair
+[[disc]]
+pos = [0, 10.5, 88]
+radius = 1.8
+style = "candy"
+move = { type = "circle", radius = 4, speed = 1.2, phase = 0 }
+
+[[disc]]
+pos = [0, 10.5, 88]
+radius = 1.8
+style = "candy"
+move = { type = "circle", radius = 4, speed = 1.2, phase = 3.14159 }
+
+[[path]]
+from = [10, 20.5, 123]
+to = [10, 21, 137]
+count = 3
+shape = "block"
+size = [3, 0.8, 3]
+style = "terracotta"
+move = { type = "line", axis = [1, 0, 0], amp = 3, speed = 1.5 }
+alternate = true
+
+[[disc]]
+pos = [18, 28, 154]
+radius = 1.8
+style = "cloud"
+
+[[bouncer]]
+pos = [0, 1, 43]
+power = 26
+
+[[bouncer]]
+pos = [3, 11, 106]
+power = 26
+
+[[bouncer]]
+pos = [14, 21, 150]
+power = 22
+
+[[crate]]
+pos = [-2.5, 10, 55]
+contains = "sparks"
+
+[[crate]]
+pos = [2.5, 10, 55]
+contains = "sparks"
+
+[[crate]]
+pos = [-3, 11, 103]
+contains = "heart"
+
+[[sparks]]
+type = "ring"
+center = [0, 1.2, 0]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "line"
+from = [0, 2.2, 33]
+to = [0, 2.2, 39]
+count = 4
+
+[[sparks]]
+type = "column"
+pos = [0, 3, 43]
+count = 7
+step = 1.3
+
+[[sparks]]
+type = "arc"
+from = [0, 11.5, 60]
+to = [0, 11.5, 69]
+height = 3
+count = 7
+
+[[sparks]]
+type = "ring"
+center = [0, 11.2, 75]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 11.8, 88]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "column"
+pos = [3, 13, 106]
+count = 7
+step = 1.3
+
+[[sparks]]
+type = "ring"
+center = [10, 21.2, 114]
+radius = 3
+count = 6
+
+[[sparks]]
+type = "ring"
+center = [10, 22.2, 148]
+radius = 4.5
+count = 10
+
+[[token]]
+pos = [6, 4.8, 20]
+
+[[token]]
+pos = [-9, 12.8, 56]
+
+[[token]]
+pos = [18, 28.8, 154]
+
+[[checkpoint]]
+pos = [-3, 10, 75]
+
+[[checkpoint]]
+pos = [8, 20, 112]
+
+[[hint]]
+pos = [0, 0, 0]
+radius = 4
+text = "Bonus world! No enemies here — just beat the clock"
+
+[[hint]]
+pos = [0, 10, 57]
+radius = 2.5
+text = "The widest gap in the game. Run, double jump, then <b>dash</b>"

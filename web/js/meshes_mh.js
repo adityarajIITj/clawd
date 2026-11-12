@@ -146,10 +146,116 @@ export function buildDecorMH(r, kind, variant) {
       }
       break;
     }
+    case 'pine': { // snow-dusted conifer
+      const trunk = hex('#6a4a34'), green = hex('#2f7a6a'), snow = hex('#f4f9ff');
+      mb.cylinder(T(0, 0, 0), 0.2, 0.14, 0.9, 7, trunk, true);
+      for (let i = 0; i < 3; i++) {
+        const y = 0.7 + i * 0.75, rr = 1.0 - i * 0.26;
+        mb.lathe(T(0, y, 0, rnd() * 6), [[0.0001, 0], [rr, 0.05], [rr * 0.55, 0.55], [0.0001, 1.05]], 8,
+          (v) => (v > 0.7 ? snow : mix3(mulc(green, 0.75), green, v * 1.4)), false);
+      }
+      break;
+    }
+    case 'snowman': {
+      const sn = hex('#f6faff');
+      mb.sphere(T(0, 0.42, 0), 0.45, 12, sn);
+      mb.sphere(T(0, 1.02, 0), 0.33, 12, sn);
+      mb.sphere(T(0, 1.5, 0), 0.24, 12, sn);
+      mb.lathe(T(0, 1.5, 0.22, 0, Math.PI / 2, 0), [[0.0001, 0], [0.05, 0.0], [0.0001, 0.22]], 6, hex('#ff8a3a'), false);
+      for (const x of [-1, 1]) mb.sphere(T(x * 0.09, 1.57, 0.2), 0.03, 6, hex('#1a1a1e'));
+      mb.torus(T(0, 1.28, 0), 0.25, 0.06, 14, 6, hex('#d97757'));
+      for (const x of [-1, 1]) mb.cylinder(T(x * 0.3, 1.05, 0, 0, 0, x * -1.2), 0.025, 0.015, 0.5, 5, hex('#6a4a34'), true);
+      break;
+    }
+    case 'tank': { // rooftop water tank on a stand
+      const black = hex('#1e2026'), leg = hex('#6a6e78');
+      for (const [x, z] of [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5], [0.5, 0.5]]) mb.cylinder(T(x, 0, z), 0.05, 0.05, 0.7, 5, leg, true);
+      mb.cylinder(T(0, 0.68, 0), 0.8, 0.8, 0.06, 12, leg, true);
+      const prof = [[0.0001, 0.74]];
+      for (let i = 0; i <= 8; i++) prof.push([0.72 + (i % 2 ? 0.05 : 0), 0.74 + i * 0.16]);
+      prof.push([0.5, 2.12], [0.22, 2.2], [0.22, 2.3], [0.0001, 2.3]);
+      mb.lathe(T(0, 0, 0), prof, 14, (v) => mulc(black, 0.9 + v * 0.5), false);
+      break;
+    }
+    case 'dish': { // satellite dish
+      const metal = hex('#c8ccd4');
+      mb.cylinder(T(0, 0, 0), 0.06, 0.05, 0.9, 6, hex('#5a5e68'), true);
+      const m = T(0, 1.05, 0, 0, -0.9, 0);
+      mb.lathe(m, [[0.0001, 0], [0.25, 0.03], [0.45, 0.1], [0.6, 0.22]], 14, metal, false);
+      mb.lathe(m, [[0.6, 0.22], [0.45, 0.08], [0.25, 0.0], [0.0001, -0.03]], 14, mulc(metal, 0.7), false);
+      mb.cylinder(T(0, 1.05, 0, 0, -0.9, 0), 0.015, 0.015, 0.5, 4, hex('#3a3e48'), true);
+      break;
+    }
     default:
       mb.sphere(T(0, 0.5, 0), 0.5, 8, [1, 0, 1]);
   }
   return mb.build(r);
 }
 
-export const MH_DECOR = new Set(['kandil', 'diya', 'boat', 'marigold']);
+export const MH_DECOR = new Set(['kandil', 'diya', 'boat', 'marigold', 'pine', 'snowman', 'tank', 'dish']);
+
+// ===========================================================================
+//  Smashable crate + lit-window building
+// ===========================================================================
+export function buildCrate(r) {
+  const mb = new MB();
+  const wood = hex('#c9925a'), dark = hex('#8a5a34'), band = hex('#6a4426');
+  mb.roundedBox(T(0, 0, 0), [1.14, 1.14, 1.14], 0.05, wood, 2, (p) => mulc(wood, 0.86 + 0.14 * (Math.floor((p[1] + 0.6) * 5) % 2)));
+  // corner posts and rims
+  for (const x of [-1, 1]) for (const z of [-1, 1]) mb.roundedBox(T(x * 0.54, 0, z * 0.54), [0.16, 1.22, 0.16], 0.03, dark, 1);
+  for (const y of [-1, 1]) {
+    for (const z of [-1, 1]) mb.roundedBox(T(0, y * 0.54, z * 0.54), [1.22, 0.16, 0.16], 0.03, band, 1);
+    for (const x of [-1, 1]) mb.roundedBox(T(x * 0.54, y * 0.54, 0), [0.16, 0.16, 1.22], 0.03, band, 1);
+  }
+  // starburst brand on each side
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2;
+    mb.starburst(T(Math.sin(a) * 0.585, 0, Math.cos(a) * 0.585, a), 6, 0.06, 0.26, 0.02, hex('#d97757'), hex('#ffb37a'));
+  }
+  return mb.build(r);
+}
+
+export function buildBuilding(r, half, seed) {
+  const [hx, hy, hz] = half;
+  const rnd = mulberry(seed * 977 + 13);
+  const mb = new MB();
+  const wall = [hex('#2c3046'), hex('#33304a'), hex('#263244'), hex('#3a3340')][seed % 4];
+  const roof = hex('#3e424e');
+  const y0 = -hy, y1 = hy;
+  // walls (outward-facing quads) + roof
+  mb.quad([-hx, y0, hz], [hx, y0, hz], [hx, y1, hz], [-hx, y1, hz], wall);
+  mb.quad([hx, y0, -hz], [-hx, y0, -hz], [-hx, y1, -hz], [hx, y1, -hz], mulc(wall, 0.92));
+  mb.quad([hx, y0, hz], [hx, y0, -hz], [hx, y1, -hz], [hx, y1, hz], mulc(wall, 0.96));
+  mb.quad([-hx, y0, -hz], [-hx, y0, hz], [-hx, y1, hz], [-hx, y1, -hz], mulc(wall, 0.88));
+  mb.quad([-hx, y1, hz], [hx, y1, hz], [hx, y1, -hz], [-hx, y1, -hz], roof);
+  // windows: warm, cool, or dark
+  const lit = [hex('#ffd98a'), hex('#ffc46a'), hex('#bfe0ff'), hex('#fff2c8')];
+  const off = hex('#151a2c');
+  const rowH = 2.3, colW = 1.7, ww = 0.95, wh = 1.25, e = 0.03;
+  const rows = Math.floor((hy * 2 - 1.5) / rowH);
+  const sides = [
+    [hx, (u, y) => [[u - ww / 2, y, hz + e], [u + ww / 2, y, hz + e], [u + ww / 2, y + wh, hz + e], [u - ww / 2, y + wh, hz + e]]],
+    [hx, (u, y) => [[u + ww / 2, y, -hz - e], [u - ww / 2, y, -hz - e], [u - ww / 2, y + wh, -hz - e], [u + ww / 2, y + wh, -hz - e]]],
+    [hz, (u, y) => [[hx + e, y, u + ww / 2], [hx + e, y, u - ww / 2], [hx + e, y + wh, u - ww / 2], [hx + e, y + wh, u + ww / 2]]],
+    [hz, (u, y) => [[-hx - e, y, u - ww / 2], [-hx - e, y, u + ww / 2], [-hx - e, y + wh, u + ww / 2], [-hx - e, y + wh, u - ww / 2]]],
+  ];
+  for (const [span, quad] of sides) {
+    const cols = Math.max(1, Math.floor((span * 2 - 0.8) / colW));
+    for (let rr = 0; rr < rows; rr++) {
+      const y = y1 - 1.9 - rr * rowH;
+      for (let c = 0; c < cols; c++) {
+        const u = (c - (cols - 1) / 2) * colW;
+        const col = rnd() < 0.42 ? lit[Math.floor(rnd() * lit.length)] : off;
+        const q = quad(u, y);
+        mb.quad(q[0], q[1], q[2], q[3], col);
+      }
+    }
+  }
+  // parapet around the roof edge
+  const pc = mulc(wall, 1.25);
+  mb.roundedBox(T(0, y1 + 0.12, hz - 0.12), [hx * 2, 0.24, 0.24], 0.03, pc, 1);
+  mb.roundedBox(T(0, y1 + 0.12, -hz + 0.12), [hx * 2, 0.24, 0.24], 0.03, pc, 1);
+  mb.roundedBox(T(hx - 0.12, y1 + 0.12, 0), [0.24, 0.24, hz * 2], 0.03, pc, 1);
+  mb.roundedBox(T(-hx + 0.12, y1 + 0.12, 0), [0.24, 0.24, hz * 2], 0.03, pc, 1);
+  return mb.build(r);
+}

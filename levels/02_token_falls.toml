@@ -7,7 +7,8 @@ id = 2
 name = "Token Falls"
 subtitle = "Where words pour down like water"
 story = "Beyond the meadows, a lagoon hums with falling glyphs. The Sparks have washed downstream, and the Glitchlings are drifting on the current. Clawd will need sharp timing to ride the logs."
-music = "falls"
+music = "konkan"
+quests = ["all_sparks", "stomp_all", "par"]
 seed = 2202
 spawn = [0, 4.5, 0]
 goal = [56, 8, 112]
@@ -296,3 +297,13 @@ mesh = "waterfall"
 pos = [20, 13.8, 119]
 rot = 3.14
 size = [5, 18]
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [-3, 5, 36]
+contains = "sparks"
+
+[[crate]]
+pos = [29, 9, 50]
+contains = "heart"
+

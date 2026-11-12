@@ -43,6 +43,7 @@ export class UI {
   // ---------------------------------------------------------------------------
   show(name, html, cls = '') {
     this.current = name;
+    this.clearHint();
     this.screen.className = `screen show ${cls}`;
     this.screen.innerHTML = html;
     this.focusIdx = 0;
@@ -109,6 +110,7 @@ export class UI {
       .replace(/Press <b>SPACE<\/b> to jump — hold it longer/g, 'Tap <b>Jump</b> to jump — hold it longer')
       .replace(/<b>SPACE<\/b>/g, '<b>Jump</b>')
       .replace(/Press <b>SHIFT<\/b> in mid-air/g, 'Tap <b>Pound</b> in mid-air')
+      .replace(/Press <b>F<\/b> to <b>dash<\/b>/g, 'Tap <b>Dash</b> to dash')
       .replace(/\(SHIFT\)/g, '(Pound)');
   }
 

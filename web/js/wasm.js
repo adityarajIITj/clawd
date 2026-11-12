@@ -23,7 +23,7 @@ export async function loadNative() {
     playerParams: (g, s) => C.player_set_params(g, s),
     bounce: (vy) => C.player_bounce(vy),
     knock: (x, y, z) => C.player_knock(x, y, z),
-    step: (dt, ix, iz, held, pressed, pound) => C.player_step(dt, ix, iz, held ? 1 : 0, pressed ? 1 : 0, pound ? 1 : 0),
+    step: (dt, ix, iz, held, pressed, pound, dash) => C.player_step(dt, ix, iz, held ? 1 : 0, pressed ? 1 : 0, pound ? 1 : 0, dash ? 1 : 0),
     state() {
       return new Float32Array(C.memory.buffer, C.player_state_ptr(), 16);
     },
@@ -46,5 +46,5 @@ export async function loadNative() {
     },
     T: { BURST: 0, DUST: 1, MOTE: 2, CONFETTI: 3, TRAIL: 4, EMBER: 5, RING: 6, SNOW: 7, RAIN: 8 },
   };
-  return { physics, fx: fxApi, EV: { JUMP: 1, DJUMP: 2, LAND: 4, BOUNCE: 8, POUND: 16, POUND_LAND: 32, WALL: 64 } };
+  return { physics, fx: fxApi, EV: { JUMP: 1, DJUMP: 2, LAND: 4, BOUNCE: 8, POUND: 16, POUND_LAND: 32, WALL: 64, DASH: 128 } };
 }

@@ -22,8 +22,13 @@
     0.3412
    ]
   },
-  "sparks": 48,
-  "parTime": 90
+  "sparks": 51,
+  "parTime": 90,
+  "quests": [
+   "all_sparks",
+   "tokens",
+   "no_hurt"
+  ]
  },
  {
   "id": 2,
@@ -48,8 +53,13 @@
     0.6588
    ]
   },
-  "sparks": 49,
-  "parTime": 120
+  "sparks": 52,
+  "parTime": 120,
+  "quests": [
+   "all_sparks",
+   "stomp_all",
+   "par"
+  ]
  },
  {
   "id": 3,
@@ -74,8 +84,13 @@
     0.3529
    ]
   },
-  "sparks": 48,
-  "parTime": 140
+  "sparks": 51,
+  "parTime": 140,
+  "quests": [
+   "tokens",
+   "no_hurt",
+   "par"
+  ]
  },
  {
   "id": 4,
@@ -100,8 +115,13 @@
     1.0
    ]
   },
-  "sparks": 55,
-  "parTime": 150
+  "sparks": 58,
+  "parTime": 150,
+  "quests": [
+   "all_sparks",
+   "stomp_all",
+   "tokens"
+  ]
  },
  {
   "id": 5,
@@ -126,8 +146,13 @@
     0.2706
    ]
   },
-  "sparks": 59,
-  "parTime": 200
+  "sparks": 62,
+  "parTime": 200,
+  "quests": [
+   "tokens",
+   "stomp_all",
+   "par"
+  ]
  },
  {
   "id": 6,
@@ -152,8 +177,13 @@
     0.502
    ]
   },
-  "sparks": 46,
-  "parTime": 120
+  "sparks": 52,
+  "parTime": 120,
+  "quests": [
+   "all_sparks",
+   "tokens",
+   "crates"
+  ]
  },
  {
   "id": 7,
@@ -178,8 +208,13 @@
     0.2275
    ]
   },
-  "sparks": 39,
-  "parTime": 120
+  "sparks": 45,
+  "parTime": 120,
+  "quests": [
+   "all_sparks",
+   "crates",
+   "par"
+  ]
  },
  {
   "id": 8,
@@ -204,7 +239,105 @@
     0.2784
    ]
   },
-  "sparks": 41,
-  "parTime": 120
+  "sparks": 44,
+  "parTime": 120,
+  "quests": [
+   "all_sparks",
+   "tokens",
+   "no_hurt"
+  ]
+ },
+ {
+  "id": 9,
+  "campaign": "clawd",
+  "file": "09_frostbyte_peaks.json",
+  "name": "Frostbyte Peaks",
+  "subtitle": "Thin air, bright snow, and very wide gaps",
+  "theme": {
+   "skyTop": [
+    0.3529,
+    0.6039,
+    0.8784
+   ],
+   "skyHorizon": [
+    0.8745,
+    0.9412,
+    1.0
+   ],
+   "accent": [
+    0.3529,
+    0.6902,
+    0.9098
+   ]
+  },
+  "sparks": 59,
+  "parTime": 150,
+  "quests": [
+   "crates",
+   "stomp_all",
+   "tokens"
+  ]
+ },
+ {
+  "id": 10,
+  "campaign": "manus",
+  "file": "10_mumbai_nights.json",
+  "name": "Mumbai Nights",
+  "subtitle": "The city that never sleeps, seen from its rooftops",
+  "theme": {
+   "skyTop": [
+    0.0392,
+    0.0627,
+    0.1882
+   ],
+   "skyHorizon": [
+    0.4157,
+    0.2667,
+    0.3686
+   ],
+   "accent": [
+    1.0,
+    0.8118,
+    0.3529
+   ]
+  },
+  "sparks": 60,
+  "parTime": 130,
+  "quests": [
+   "all_sparks",
+   "crates",
+   "par"
+  ]
+ },
+ {
+  "id": 11,
+  "campaign": "bonus",
+  "file": "11_spark_rush.json",
+  "name": "Spark Rush",
+  "subtitle": "A victory lap for the truly dedicated",
+  "theme": {
+   "skyTop": [
+    0.4784,
+    0.3529,
+    0.8471
+   ],
+   "skyHorizon": [
+    1.0,
+    0.6902,
+    0.8157
+   ],
+   "accent": [
+    1.0,
+    0.4157,
+    0.6588
+   ]
+  },
+  "sparks": 78,
+  "parTime": 80,
+  "quests": [
+   "all_sparks",
+   "par",
+   "no_hurt"
+  ]
  }
 ]

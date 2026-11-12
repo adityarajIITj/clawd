@@ -1,10 +1,10 @@
 // WebAudio engine: buffered SFX with pitch variation + crossfading music.
 const SFX = ['jump', 'djump', 'land', 'step', 'spark', 'token', 'stomp', 'hurt', 'pound', 'pound_land', 'bounce',
-  'checkpoint', 'win', 'fall', 'click', 'hover', 'portal', 'zap'];
-const MUSIC = ['title', 'meadows', 'falls', 'dunes', 'nebula', 'citadel', 'manus', 'sahyadri', 'konkan', 'kandil', 'ending'];
-// Marathi Manus tracks are the author's own recording, shipped as MP3 parts.
+  'checkpoint', 'win', 'fall', 'click', 'hover', 'portal', 'zap', 'dash', 'crate', 'quest', 'heart'];
+// The whole soundtrack is the author's own recording, shipped as looping MP3 parts.
+const MUSIC = ['title', 'sahyadri', 'konkan', 'kandil', 'ending'];
 const FILES = {
-  manus: 'music_manus_title.mp3', sahyadri: 'music_sahyadri.mp3', konkan: 'music_konkan.mp3',
+  title: 'music_manus_title.mp3', sahyadri: 'music_sahyadri.mp3', konkan: 'music_konkan.mp3',
   kandil: 'music_kandil.mp3', ending: 'music_ending.mp3',
 };
 const ONE_SHOT = new Set(['ending']);

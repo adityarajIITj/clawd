@@ -7,7 +7,8 @@ id = 5
 name = "The Context Citadel"
 subtitle = "At the top of the tower, everything comes together"
 story = "The last Sparks have been drawn to the Context Citadel, a fortress of obsidian and gold above a molten sea. Sweepers, Glitchlings and Wisps all guard the spiral tower. At its summit waits the Great Context Window."
-music = "citadel"
+music = "konkan"
+quests = ["tokens", "stomp_all", "par"]
 seed = 5505
 spawn = [0, 2.5, 0]
 goal = [30, 34.5, 90]
@@ -293,3 +294,13 @@ mesh = "statue"
 pos = [80, 24, 100]
 rot = -2.2
 scale = 6
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [39, 5, 33]
+contains = "heart"
+
+[[crate]]
+pos = [51, 14, 42]
+contains = "sparks"
+

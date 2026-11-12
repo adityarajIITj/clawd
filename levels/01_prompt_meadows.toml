@@ -7,7 +7,8 @@ id = 1
 name = "Prompt Meadows"
 subtitle = "Every great journey begins with a single prompt"
 story = "The Great Context Window has shattered, scattering its Sparks across the realms. In the quiet meadows above the clouds, a small, curious helper named Clawd sets out to bring them home."
-music = "meadows"
+music = "sahyadri"
+quests = ["all_sparks", "tokens", "no_hurt"]
 seed = 1101
 spawn = [0, 0.5, 0]
 goal = [0, 7.5, 113]
@@ -261,3 +262,23 @@ text = "Petal pads launch you skyward"
 pos = [14, 12, 84]
 radius = 3.5
 text = "Press <b>SHIFT</b> in mid-air to <b>ground pound</b>"
+
+# ---- crates (ground pound to smash) ----
+[[crate]]
+pos = [3, 1.2, 27]
+contains = "sparks"
+
+[[crate]]
+pos = [-4, 5, 78]
+contains = "heart"
+
+[[hint]]
+pos = [3, 1.2, 27]
+radius = 2.6
+text = "Wooden crates hide goodies. <b>Ground pound</b> on top of one to smash it"
+
+[[hint]]
+pos = [0, 4.4, 45]
+radius = 3
+text = "Press <b>F</b> to <b>dash</b> — on the ground or once in mid-air. It carries you across long gaps"
+
