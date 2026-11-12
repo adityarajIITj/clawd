@@ -171,6 +171,47 @@ def inst_oud(f: float, dur: float) -> np.ndarray:
     return y * np.minimum(1, t / 0.002)
 
 
+def inst_bansuri(f: float, dur: float) -> np.ndarray:
+    """Bamboo flute: soft fundamental, delayed vibrato, breath noise."""
+    t = t_axis(dur)
+    vib = 1 + 0.006 * np.sin(2 * np.pi * 5.2 * t) * np.clip((t - 0.25) / 0.4, 0, 1)
+    ph = 2 * np.pi * f * np.cumsum(vib) / SR
+    y = np.sin(ph) + 0.18 * np.sin(2 * ph) + 0.06 * np.sin(3 * ph)
+    breath = lowpass(noise(len(t), int(f) % 97), 2600) * 0.12
+    env = env_adsr(len(t), min(0.12, dur * 0.3), 0.1, 0.85, min(0.25, dur * 0.4))
+    return (y + breath) * env
+
+
+def inst_harmonium(f: float, dur: float) -> np.ndarray:
+    """Reed organ: rich harmonics with two slightly detuned reeds."""
+    t = t_axis(dur)
+    y = np.zeros_like(t)
+    for d in (0.0, 0.0035):
+        for k in range(1, 9):
+            y += np.sin(2 * np.pi * f * (1 + d) * k * t + k) * (1 / k ** 1.1) * (1.0 if k % 2 else 0.7)
+    return y * env_adsr(len(t), 0.18, 0.2, 0.85, 0.35) / 5
+
+
+def inst_santoor(f: float, dur: float) -> np.ndarray:
+    """Hammered dulcimer: bright strike with a soft shimmering tail (paired strings)."""
+    t = t_axis(dur)
+    y = np.zeros_like(t)
+    for d in (-0.002, 0.002):
+        for k, a in ((1, 1.0), (2, 0.45), (3, 0.25), (4.1, 0.12), (5.3, 0.06)):
+            y += a * np.sin(2 * np.pi * f * (1 + d) * k * t) * np.exp(-t * (1.6 + k * 1.4))
+    return y * np.minimum(1, t / 0.002) * 0.6
+
+
+def inst_tanpura(f: float, dur: float) -> np.ndarray:
+    """Drone with jawari buzz: many harmonics swelling in and out."""
+    t = t_axis(dur)
+    y = np.zeros_like(t)
+    for k in range(1, 14):
+        swell = 0.5 + 0.5 * np.sin(2 * np.pi * (0.15 + k * 0.037) * t + k)
+        y += np.sin(2 * np.pi * f * k * t) / k ** 0.9 * swell
+    return y * env_adsr(len(t), 0.4, 0.3, 0.8, 0.6) / 6
+
+
 def drum_kick(dur: float = 0.4, punch: float = 1.0) -> np.ndarray:
     t = t_axis(dur)
     f = 45 + 110 * np.exp(-t / 0.035)
@@ -213,6 +254,9 @@ SCALES = {
     "lydian": [0, 2, 4, 6, 7, 9, 11],
     "phrygdom": [0, 1, 4, 5, 7, 8, 10],
     "pent": [0, 2, 4, 7, 9],
+    "bhupali": [0, 2, 4, 7, 9],
+    "megh": [0, 2, 5, 7, 10],
+    "yaman": [0, 2, 4, 6, 7, 9, 11],
 }
 
 
@@ -266,6 +310,8 @@ LEADS = {
     "pluck": lambda f, d: inst_pluck(f, d + 0.6),
     "oud": lambda f, d: inst_oud(f, d + 0.8),
     "brass": lambda f, d: inst_brass(f, d),
+    "bansuri": lambda f, d: inst_bansuri(f, d + 0.15),
+    "santoor": lambda f, d: inst_santoor(f, d + 1.2),
 }
 
 
@@ -305,8 +351,12 @@ def render_track(tr: Track) -> np.ndarray:
 
         # pad
         if tr.pad:
+            pad_fn = inst_harmonium if tr.extra.get("pad_inst") == "harmonium" else inst_pad
             for m in ch:
-                place(buf, inst_pad(midi_hz(m), bar + 0.4), t0, 0.07, pan=rng.uniform(-0.4, 0.4))
+                place(buf, pad_fn(midi_hz(m), bar + 0.4), t0, 0.07, pan=rng.uniform(-0.4, 0.4))
+        if tr.extra.get("drone"):
+            place(buf, inst_tanpura(midi_hz(tr.root - 12), bar + 0.8), t0, 0.12, pan=-0.25)
+            place(buf, inst_tanpura(midi_hz(tr.root - 5), bar + 0.8), t0 + beat * 2, 0.08, pan=0.25)
 
         # bass
         if tr.bass:
@@ -372,6 +422,23 @@ def render_track(tr: Track) -> np.ndarray:
                     if k in (4, 12):
                         place(buf, drum_snare(), tt, 0.3)
                     place(buf, drum_hat(seed=k), tt, 0.1 if k % 2 else 0.05, pan=0.3)
+                elif tr.drums in ("dholki", "dholki_soft"):
+                    soft = tr.drums == "dholki_soft"
+                    bass = (0, 8) if soft else (0, 6, 8, 14)
+                    slap = (6, 12) if soft else (3, 4, 10, 12)
+                    if k in bass:
+                        place(buf, drum_tabla(115 + (k % 3) * 6), tt, 0.32 if soft else 0.4)
+                    if k in slap:
+                        place(buf, drum_tabla(390 + 30 * (k % 2)), tt, 0.12 if soft else 0.17, pan=0.25)
+                    if not soft and k % 2 == 1:
+                        place(buf, drum_shaker(seed=k), tt, 0.05, pan=-0.3)
+                elif tr.drums == "dadra":
+                    if k in (0, 9):
+                        place(buf, drum_tabla(118), tt, 0.36)
+                    if k in (3, 6, 12, 14):
+                        place(buf, drum_tabla(400 + 25 * (k % 3)), tt, 0.13, pan=0.2)
+                    if k in (5, 11):
+                        place(buf, drum_shaker(seed=k), tt, 0.05, pan=-0.3)
                 elif tr.drums == "sparse":
                     if k == 0 and b % 2 == 0:
                         place(buf, drum_kick(punch=0.6), tt, 0.35)
@@ -405,6 +472,17 @@ TRACKS = [
           bars=12, density=0.45, seed=41, reverb_s=4.0, reverb_mix=0.5, lead_oct=12),
     Track("citadel", 124, 60, "minor", [0, 5, 2, 6], lead="brass", arp="pluck", drums="drive",
           bars=16, density=0.7, seed=51, extra={"bass_pattern": [0, 0.75, 1.5, 2.5, 3.0], "arp_step": 0.25}),
+    # ---- Marathi Manus campaign: original folk-inspired, deliberately soothing ----
+    Track("manus", 92, 62, "bhupali", [0, 0, 3, 4, 0, 0, 4, 3], lead="bansuri", arp="santoor", drums="dholki",
+          bars=16, density=0.6, seed=61, bass=None, extra={"pad_inst": "harmonium", "drone": True, "arp_step": 0.5}),
+    Track("sahyadri", 76, 60, "megh", [0, 0, 3, 2], lead="bansuri", arp="santoor", drums="dholki_soft",
+          bars=16, density=0.5, seed=71, bass=None, reverb_s=3.4, reverb_mix=0.42, pad=False,
+          extra={"drone": True, "arp_step": 1.0}),
+    Track("konkan", 84, 65, "bhupali", [0, 3, 0, 4], lead="bansuri", arp="santoor", drums="dadra",
+          bars=16, density=0.55, seed=81, bass="bass", extra={"pad_inst": "harmonium", "arp_step": 0.5, "bass_pattern": [0, 2.0]}),
+    Track("kandil", 70, 64, "yaman", [0, 1, 4, 0], lead="bell", arp="santoor", drums="dholki_soft",
+          bars=12, density=0.45, seed=91, bass=None, reverb_s=4.0, reverb_mix=0.5,
+          extra={"drone": True, "pad_inst": "harmonium", "arp_step": 1.0}),
 ]
 
 

@@ -2,6 +2,7 @@
 import { m4, v3, mulberry, clamp } from './math.js';
 import { lin } from './gl.js';
 import * as M from './meshes.js';
+import * as MH from './meshes_mh.js';
 
 const hex = M.hex;
 
@@ -19,13 +20,22 @@ const PALETTES = {
   4: { foliage: ['#6a7ad8', '#8a6ad8'].map(hex), blossom: ['#ff9ae8'].map(hex), blossomChance: 0.3,
        flowers: ['#9ae8ff', '#ff9ae8'].map(hex), rock: hex('#5a5490'), crystal: ['#7ae8ff', '#b48aff', '#ff8ad8', '#8affd0'].map(hex), stone: hex('#9a90d0'),
        grass: [hex('#3a3a8a'), hex('#8ab8ff')] },
+  6: { foliage: ['#4f9a4a', '#5fae52', '#3f8a46', '#77b860'].map(hex), blossom: ['#f7d36a'].map(hex), blossomChance: 0.12,
+       flowers: ['#ff9a1a', '#ffd35a', '#f2f0ea', '#c87ad8'].map(hex), rock: hex('#6a6c6e'), crystal: ['#9fe8ff'].map(hex), stone: hex('#9a9c98'),
+       grass: [hex('#3f7a3a'), hex('#9ad070')] },
+  7: { foliage: ['#4f9a3a', '#6aae46', '#3f8a3a'].map(hex), blossom: ['#ff8a5a'].map(hex), blossomChance: 0,
+       flowers: ['#ff9a1a', '#ff5a7a', '#ffd35a'].map(hex), rock: hex('#a8553a'), crystal: ['#ffcf8a'].map(hex), stone: hex('#c88a6a'),
+       grass: [hex('#5a8a3a'), hex('#c8d88a')] },
+  8: { foliage: ['#2f6a4a', '#3f7a5a'].map(hex), blossom: ['#ffb347', '#ff7a9a'].map(hex), blossomChance: 0.5,
+       flowers: ['#ff9a1a', '#ffc21a', '#ff7a9a'].map(hex), rock: hex('#5a4a50'), crystal: ['#ffd890'].map(hex), stone: hex('#8a8a90'),
+       grass: [hex('#24503a'), hex('#5f9a6a')] },
   5: { foliage: ['#8a4a3a'].map(hex), blossom: ['#ff7a45'].map(hex), blossomChance: 0,
        flowers: ['#ffb060'].map(hex), rock: hex('#3a3238'), crystal: ['#ff7a45'].map(hex), stone: hex('#4a4048'),
        grass: [hex('#4a2a2a'), hex('#a05a3a')] },
 };
 
-const WIND = { tree: 0.035, palm: 0.05, bush: 0.07, flower: 0.35, rock: 0, cactus: 0.0, crystal: 0, shroom: 0.05, column: 0, brazier: 0, lamp: 0, flame: 0.2 };
-const EMIS = { crystal: 0.9, shroom: 1.4, lamp: 0.0, flame: 3.0 };
+const WIND = { marigold: 0.3, kandil: 0.04, diya: 0, boat: 0, tree: 0.035, palm: 0.05, bush: 0.07, flower: 0.35, rock: 0, cactus: 0.0, crystal: 0, shroom: 0.05, column: 0, brazier: 0, lamp: 0, flame: 0.2 };
+const EMIS = { kandil: 1.6, diya: 2.2, crystal: 0.9, shroom: 1.4, lamp: 0.0, flame: 3.0 };
 const FLOOR_TYPES = { clouds: 0, water: 1, sand: 2, nebula: 3, lava: 4 };
 
 export class World {
@@ -117,7 +127,7 @@ export class World {
     }
     const rnd = mulberry(data.id * 999);
     for (const [, g] of groups) {
-      const mesh = keep(g.kind === 'flame' ? buildFlame(r) : M.buildDecor(r, g.kind, g.variant, this.pal));
+      const mesh = keep(g.kind === 'flame' ? buildFlame(r) : MH.MH_DECOR.has(g.kind) ? MH.buildDecorMH(r, g.kind, g.variant) : M.buildDecor(r, g.kind, g.variant, this.pal));
       const arr = new Float32Array(g.list.length * 8);
       g.list.forEach((d, i) => {
         arr.set([d.pos[0], d.pos[1] - 0.05, d.pos[2], d.scale, d.rot, WIND[g.kind] ?? 0, 0.9 + rnd() * 0.2, 1], i * 8);
@@ -125,7 +135,7 @@ export class World {
       const inst = r.createInstanced(mesh, arr);
       this.meshes.push(inst);
       const em = EMIS[g.kind] || 0;
-      this.decorGroups.push({ kind: g.kind, inst, emissive: [em, em, em], noShadow: g.kind === 'flower' || g.kind === 'flame', doubleSided: g.kind === 'palm' });
+      this.decorGroups.push({ kind: g.kind, inst, emissive: [em, em, em], noShadow: g.kind === 'flower' || g.kind === 'flame' || g.kind === 'marigold' || g.kind === 'diya', doubleSided: g.kind === 'palm' });
     }
     if (this.arches.length) this.archMesh = keep(M.buildArch(r, this.pal));
     if (this.statues.length) {
@@ -154,7 +164,8 @@ export class World {
     }
 
     // ---- collectibles -----------------------------------------------------------------
-    const sparkMesh = game.shared.spark;
+    this.reptiles = game.character === 'manus';
+    const sparkMesh = this.reptiles ? game.shared.lizard : game.shared.spark;
     this.sparks = data.sparks.map((p, i) => ({ p, alive: true, phase: i * 0.7 }));
     this.sparkTotal = this.sparks.length;
     this.sparkBuf = new Float32Array(this.sparks.length * 8);
@@ -182,7 +193,7 @@ export class World {
     const fx = this.g.native.fx;
     const th = this.d.theme;
     const pc = lin(hex(th.particleColor || '#ffffff')).map((c) => c * 1.6);
-    const type = { mote: fx.T.MOTE, snow: fx.T.SNOW, ember: fx.T.EMBER }[th.particles] ?? fx.T.MOTE;
+    const type = { mote: fx.T.MOTE, snow: fx.T.SNOW, ember: fx.T.EMBER, rain: fx.T.RAIN }[th.particles] ?? fx.T.MOTE;
     fx.clear();
     fx.ambient(type, pc, Math.round(260 * this.g.settings.particles), 34);
     fx.wind(this.env.wind[0] * 1.5, this.env.wind[1] * 1.5);
@@ -237,8 +248,9 @@ export class World {
       if (d2 < 1.3) {
         s.alive = false;
         this.sparkGot++;
-        fx.emit(fx.T.BURST, s.p, 14, [2.4, 1.2, 0.5], 6);
-        fx.emit(fx.T.RING, s.p, 12, [2.0, 1.4, 0.7], 5);
+        const c = this.reptiles ? [0.6, 2.2, 0.8] : [2.4, 1.2, 0.5];
+        fx.emit(fx.T.BURST, s.p, 14, c, 6);
+        fx.emit(fx.T.RING, s.p, 12, this.reptiles ? [0.9, 2.0, 1.0] : [2.0, 1.4, 0.7], 5);
         out.push({ type: 'spark', pos: s.p });
       } else if (d2 < 6) {
         // gentle magnet
@@ -397,16 +409,17 @@ export class World {
     let n = 0;
     for (const s of this.sparks) {
       if (!s.alive) continue;
-      this.sparkBuf.set([s.p[0], s.p[1] + Math.sin(t * 2.5 + s.phase) * 0.15, s.p[2], 0.9, t * 2.2 + s.phase, 0, 1, 1], n * 8);
+      this.sparkBuf.set([s.p[0], s.p[1] + Math.sin(t * 2.5 + s.phase) * 0.15 - (this.reptiles ? 0.15 : 0), s.p[2], this.reptiles ? 0.8 : 0.9, t * (this.reptiles ? 1.3 : 2.2) + s.phase, 0, 1, 1], n * 8);
       n++;
     }
     r.updateInstances(this.sparkInst, this.sparkBuf, n);
-    r.draw({ inst: this.sparkInst, emissive: [0.75, 0.75, 0.75], rim: 0.6, noShadow: false });
+    r.draw({ inst: this.sparkInst, emissive: this.reptiles ? [0.12, 0.12, 0.12] : [0.75, 0.75, 0.75], rim: 0.6, noShadow: false });
 
     for (const tk of this.tokens) {
       if (!tk.alive) continue;
       const y = tk.p[1] + Math.sin(t * 2 + tk.i) * 0.2;
-      r.draw({ mesh: sh.token, model: m4.trs([tk.p[0], y, tk.p[2]], t * 2.5 + tk.i, 0, 0, [1.25, 1.25, 1.25]), emissive: [0.35, 0.3, 0.12], rim: 0.8, spec: 0.8, outline: 0.8 });
+      if (this.reptiles) r.draw({ mesh: sh.komodo, model: m4.trs([tk.p[0], y - 0.3, tk.p[2]], t * 1.2 + tk.i, 0, 0, [1.0, 1.0, 1.0]), emissive: [0.05, 0.05, 0.04], rim: 0.7, spec: 0.3, outline: 0.8 });
+      else r.draw({ mesh: sh.token, model: m4.trs([tk.p[0], y, tk.p[2]], t * 2.5 + tk.i, 0, 0, [1.25, 1.25, 1.25]), emissive: [0.35, 0.3, 0.12], rim: 0.8, spec: 0.8, outline: 0.8 });
       r.drawFx({ mesh: sh.halo, model: billboard(cam, [tk.p[0], y, tk.p[2]], 3.2), mode: 4, colA: [2.0, 1.5, 0.5], param: 0.5, additive: true, depth: v3.dist(cam.pos, tk.p) });
     }
 

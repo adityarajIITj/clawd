@@ -44,7 +44,7 @@ export async function loadNative() {
       const n = F.fx_update(dt, t, c[0], c[1], c[2]);
       return { count: n, data: new Float32Array(F.memory.buffer, F.fx_buffer(), n * 8) };
     },
-    T: { BURST: 0, DUST: 1, MOTE: 2, CONFETTI: 3, TRAIL: 4, EMBER: 5, RING: 6, SNOW: 7 },
+    T: { BURST: 0, DUST: 1, MOTE: 2, CONFETTI: 3, TRAIL: 4, EMBER: 5, RING: 6, SNOW: 7, RAIN: 8 },
   };
   return { physics, fx: fxApi, EV: { JUMP: 1, DJUMP: 2, LAND: 4, BOUNCE: 8, POUND: 16, POUND_LAND: 32, WALL: 64 } };
 }

@@ -1,0 +1,203 @@
+# ============================================================================
+#  MARATHI MANUS · WORLD 3 — KANDIL LAKE
+#  A festival night: star lanterns, floating diyas, fireflies over still water.
+# ============================================================================
+[level]
+id = 8
+campaign = "manus"
+name = "Kandil Lake"
+subtitle = "Lanterns on the water, and the night is warm"
+story = "It's festival night. Akash kandils glow on every pole, diyas drift across the lake, and fireflies have joined the celebration. One last climb up to the old temple on the hill — and then, finally, rest."
+music = "kandil"
+seed = 8808
+spawn = [0, 1.5, 0]
+goal = [0, 9, 93]
+parTime = 120
+
+[theme]
+skyTop = "#0e1430"
+skyHorizon = "#4a3a6a"
+skyBottom = "#1a1a3a"
+sunColor = "#c8d0ff"
+sunDir = [-0.5, 0.55, 0.4]
+sunIntensity = 1.4
+ambSky = "#6474b4"
+ambGround = "#7a5458"
+fogColor = "#2a2448"
+fogDensity = 0.008
+floor = "water"
+floorY = -3
+floorColor = "#2a3a7a"
+floorColor2 = "#0a1030"
+clouds = 0
+stars = 1
+bloom = 1.0
+exposure = 1.05
+saturation = 1.08
+contrast = 1.03
+particles = "mote"
+particleColor = "#ffd890"
+accent = "#ffb347"
+wind = [0.2, 0.1]
+
+[[island]]
+pos = [0, 1, 0]
+radius = 8
+shape = "pillar"
+style = "lakeshore"
+decor = "festival"
+
+[[island]]
+pos = [0, 1.5, 34]
+radius = 7
+shape = "pillar"
+style = "lakeshore"
+decor = "festival"
+density = 0.8
+
+[[island]]
+pos = [-12, 3, 40]
+radius = 2.5
+shape = "pillar"
+style = "lakeshore"
+
+[[island]]
+pos = [0, 2.5, 62]
+radius = 7
+shape = "pillar"
+style = "lakeshore"
+decor = "festival"
+density = 0.8
+
+[[island]]
+pos = [12, 10, 72]
+radius = 5
+shape = "pillar"
+style = "fort"
+decor = "festival"
+density = 0.6
+
+[[island]]
+pos = [0, 9, 90]
+radius = 7
+shape = "pillar"
+style = "fort"
+decor = "festival"
+density = 0.6
+
+# far shores
+[[island]]
+pos = [-45, 6, 60]
+radius = 16
+shape = "pillar"
+style = "lakeshore"
+decor = "festival"
+density = 0.3
+
+[[island]]
+pos = [50, 8, 40]
+radius = 14
+shape = "pillar"
+style = "lakeshore"
+decor = "festival"
+density = 0.3
+
+# lotus leaves
+[[path]]
+from = [0, 0.6, 12]
+to = [0, 0.6, 24]
+count = 4
+radius = 1.6
+height = 0.5
+style = "lotus"
+
+[[disc]]
+pos = [0, 1.8, 48]
+radius = 2
+height = 0.5
+style = "lotus"
+move = { type = "circle", radius = 3, speed = 0.5, phase = 0 }
+
+[[disc]]
+pos = [0, 1.8, 48]
+radius = 2
+height = 0.5
+style = "lotus"
+move = { type = "circle", radius = 3, speed = 0.5, phase = 3.14159 }
+
+[[path]]
+from = [9, 10, 80]
+to = [4, 9.5, 84]
+count = 2
+radius = 1.5
+style = "fort"
+
+[[block]]
+pos = [15, 13, 76]
+size = [2, 1, 2]
+style = "fort"
+
+[[bouncer]]
+pos = [4, 2.5, 65]
+power = 23
+
+[[sparks]]
+type = "ring"
+center = [0, 2.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 2.7, 34]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 3.0, 48]
+radius = 3
+count = 6
+
+[[sparks]]
+type = "column"
+pos = [4, 4.5, 65]
+count = 5
+step = 1.4
+
+[[sparks]]
+type = "ring"
+center = [0, 10.2, 90]
+radius = 4.5
+count = 8
+
+[[token]]
+pos = [0, 3.3, 48]
+
+[[token]]
+pos = [-12, 3.8, 40]
+
+[[token]]
+pos = [15, 13.8, 76]
+
+[[checkpoint]]
+pos = [3, 1.5, 37]
+
+[[checkpoint]]
+pos = [9, 10, 70]
+
+[[enemy]]
+type = "glitchling"
+a = [-4, 2.5, 60]
+b = [-4, 2.5, 66]
+speed = 1.2
+
+[[hint]]
+pos = [0, 1, 0]
+radius = 5
+text = "Festival night. The lanterns will light your way"
+
+[[hint]]
+pos = [0, 1.5, 40]
+radius = 3
+text = "Ride the drifting lotus leaves — they're in no hurry either"

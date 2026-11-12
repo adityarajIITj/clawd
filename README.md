@@ -45,6 +45,23 @@ with the `wasm32-unknown-unknown` target.
 Each world has Sparks to collect (every 20 restores a heart), 3 hidden golden Tokens, Lighthouse
 checkpoints, enemies to stomp, and an S/A/B/C rank. Your progress is saved in the browser.
 
+## Second hero: Marathi Manus
+
+Pick **Hero** on the title screen to switch characters. Marathi Manus has a man bun, a neckband and
+a phone that's always out. Leave him idle and he fixes his bun, then takes a selfie. As him:
+
+- Sparks become **lizards** and golden Tokens become **Komodo dragons**.
+- Three extra, slower-paced Maharashtra worlds unlock. They have only one slow enemy each and no
+  sweepers:
+  6. **Sahyadri Monsoon**: misty ghats in the rain, old fort walls and waterfalls.
+  7. **Konkan Coast**: laterite sea stacks, palms, fishing boats and a pier at sunset.
+  8. **Kandil Lake**: a festival night with akash kandils, floating diyas, lotus leaves and fireflies.
+- The music is original and folk-inspired: bansuri, santoor, harmonium, tanpura drone and dholki,
+  written in Bhupali, Megh and Yaman–style scales.
+- **Settings → Marathi Manus music → Choose file** lets you play your own song while he's
+  selected. The file stays in your browser (IndexedDB) and is never uploaded. Commercial songs are
+  copyrighted, so don't add them to this repo or the public site.
+
 ## Architecture
 
 | Language | Where | What it does |

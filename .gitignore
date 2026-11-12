@@ -2,3 +2,8 @@ native/rust/target/
 __pycache__/
 *.pyc
 .claude/
+
+# personal local-only music (never commit or deploy)
+audio-local/
+dist/audio/custom/
+*.mp3

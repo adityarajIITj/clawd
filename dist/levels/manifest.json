@@ -1,6 +1,7 @@
 [
  {
   "id": 1,
+  "campaign": "clawd",
   "file": "01_prompt_meadows.json",
   "name": "Prompt Meadows",
   "subtitle": "Every great journey begins with a single prompt",
@@ -26,6 +27,7 @@
  },
  {
   "id": 2,
+  "campaign": "clawd",
   "file": "02_token_falls.json",
   "name": "Token Falls",
   "subtitle": "Where words pour down like water",
@@ -51,6 +53,7 @@
  },
  {
   "id": 3,
+  "campaign": "clawd",
   "file": "03_gradient_dunes.json",
   "name": "Gradient Dunes",
   "subtitle": "Descend carefully. The sand remembers every step",
@@ -76,6 +79,7 @@
  },
  {
   "id": 4,
+  "campaign": "clawd",
   "file": "04_neural_nebula.json",
   "name": "Neural Nebula",
   "subtitle": "Between the stars, every thought connects",
@@ -101,6 +105,7 @@
  },
  {
   "id": 5,
+  "campaign": "clawd",
   "file": "05_context_citadel.json",
   "name": "The Context Citadel",
   "subtitle": "At the top of the tower, everything comes together",
@@ -123,5 +128,83 @@
   },
   "sparks": 59,
   "parTime": 200
+ },
+ {
+  "id": 6,
+  "campaign": "manus",
+  "file": "06_sahyadri_monsoon.json",
+  "name": "Sahyadri Monsoon",
+  "subtitle": "Rain on the ghats, and nowhere you need to be",
+  "theme": {
+   "skyTop": [
+    0.4353,
+    0.5608,
+    0.6588
+   ],
+   "skyHorizon": [
+    0.8392,
+    0.8863,
+    0.8627
+   ],
+   "accent": [
+    0.3529,
+    0.6275,
+    0.502
+   ]
+  },
+  "sparks": 46,
+  "parTime": 120
+ },
+ {
+  "id": 7,
+  "campaign": "manus",
+  "file": "07_konkan_coast.json",
+  "name": "Konkan Coast",
+  "subtitle": "Salt air, coconut palms and a long golden evening",
+  "theme": {
+   "skyTop": [
+    0.2392,
+    0.4353,
+    0.7216
+   ],
+   "skyHorizon": [
+    1.0,
+    0.7686,
+    0.5412
+   ],
+   "accent": [
+    0.9098,
+    0.5176,
+    0.2275
+   ]
+  },
+  "sparks": 39,
+  "parTime": 120
+ },
+ {
+  "id": 8,
+  "campaign": "manus",
+  "file": "08_kandil_lake.json",
+  "name": "Kandil Lake",
+  "subtitle": "Lanterns on the water, and the night is warm",
+  "theme": {
+   "skyTop": [
+    0.0549,
+    0.0784,
+    0.1882
+   ],
+   "skyHorizon": [
+    0.2902,
+    0.2275,
+    0.4157
+   ],
+   "accent": [
+    1.0,
+    0.702,
+    0.2784
+   ]
+  },
+  "sparks": 41,
+  "parTime": 120
  }
 ]

@@ -120,3 +120,76 @@ export class Clawd {
     put(P.spark, m4.trs([0, 0.56 + Math.sin(t * 3) * 0.02, 0], t * 2.0, 0, 0, [1, 1, 1]), { emissive: [1.6, 0.9, 0.5], rim: 0 });
   }
 }
+
+// ---------------------------------------------------------------------------
+// Marathi Manus: same controller, human rig with his own idle personality.
+// Body centre sits 0.65 above the feet.
+// ---------------------------------------------------------------------------
+export class Manus extends Clawd {
+  constructor(parts) {
+    super(parts);
+    this.idleT = 0;
+  }
+
+  update(dt, st) {
+    super.update(dt, st);
+    const hs = Math.hypot(st[3], st[5]);
+    this.idleT = this.grounded && hs < 0.3 && !this.dance ? this.idleT + dt : 0;
+  }
+
+  draw(r, invuln) {
+    if (invuln > 0 && Math.floor(invuln * 14) % 2 === 0) return;
+    const P = this.parts;
+    const t = this.time;
+    const hs = Math.hypot(this.vel[0], this.vel[2]);
+    const run = clamp(hs / 7, 0, 1);
+    const sy = this.sq;
+    const sxz = 1 / Math.sqrt(Math.max(0.3, sy));
+    const bob = this.grounded ? Math.abs(Math.sin(this.walk)) * 0.06 * run : 0;
+    const base = [this.pos[0], this.pos[1] + 0.65 * sy + bob + (this.danceHop || 0), this.pos[2]];
+    const root = m4.trs(base, this.yaw + this.spin, this.lean * 0.6 + this.flip, 0, [sxz * 0.95, sy * 0.95, sxz * 0.95]);
+    const flash = Math.max(0, this.flash) * 3;
+    const put = (mesh, local, opts = {}) => r.draw({ mesh, model: m4.mul(root, local), outline: opts.outline || 0, rim: opts.rim ?? 0.4, flash, spec: opts.spec ?? 0.15 });
+
+    // idle routine: fix the bun (2.5-5s), then a selfie (5s+)
+    const idle = this.idleT;
+    const bunFix = idle > 2.5 && idle < 5.2;
+    const selfie = idle >= 5.2;
+    const breathe = this.grounded && hs < 0.3 ? Math.sin(t * 2.2) * 0.012 : 0;
+
+    put(P.torso, m4.trs([0, 0.02 + breathe, 0]), { outline: 1.0 });
+    const headTilt = selfie ? 0.18 : bunFix ? -0.12 : 0;
+    const headYaw = selfie ? -0.35 : 0;
+    const head = m4.trs([0, 0.55 + breathe, 0.01], headYaw, headTilt, selfie ? -0.12 : 0);
+    put(P.head, head, { outline: 1.1 });
+    for (const s of [-1, 1]) put(P.eye, m4.mul(head, m4.trs([s * 0.095, 0.03, 0.245], 0, 0, 0, [1, this.blink, 1])), { spec: 0.6, rim: 0 });
+    if (this.dance || selfie) {
+      put(P.tongue, m4.mul(head, m4.trs([0, -0.165, 0.255], 0, 0.4, 0)), { rim: 0 });
+    } else {
+      put(P.mouth, m4.mul(head, m4.trs([0, -0.165, 0.245])), { rim: 0 });
+    }
+
+    // arms (pivot at the shoulder)
+    for (const s of [-1, 1]) {
+      let pitch = this.grounded ? -Math.sin(this.walk + (s > 0 ? 0 : Math.PI)) * 0.8 * run : -0.4;
+      let roll = -s * (0.12 + this.armLift * 0.9);
+      let yaw = 0;
+      if (this.pounding) { pitch = -2.6; roll = -s * 0.3; }
+      if (this.dance) { pitch = -2.4 + Math.sin(t * 9 + s) * 0.5; roll = -s * (0.5 + Math.sin(t * 7 + s) * 0.3); }
+      if (s < 0 && bunFix) { pitch = -2.7; roll = 0.5 + Math.sin(t * 10) * 0.12; }
+      if (s > 0 && selfie) { pitch = -1.7; roll = 0.35; yaw = -0.4; }
+      const sh = m4.trs([s * 0.32, 0.2 + breathe, 0], yaw, pitch, roll);
+      put(P.arm, sh, { outline: 0.9 });
+      if (s > 0 && (selfie || (!this.dance && this.grounded && hs < 0.3))) {
+        put(P.phone, m4.mul(sh, m4.trs([0, -0.44, 0.05], 0, selfie ? -0.2 : 1.3, 0)), { spec: 0.9, rim: 0.2 });
+      }
+    }
+    // legs (pivot at the hip)
+    for (const s of [-1, 1]) {
+      let sw = this.grounded ? Math.sin(this.walk + (s > 0 ? Math.PI : 0)) * 0.85 * run : (s > 0 ? -0.5 : 0.25);
+      if (this.pounding) sw = -1.2;
+      if (this.dance) sw = Math.sin(t * 12 + (s > 0 ? Math.PI : 0)) * 0.35;
+      put(P.leg, m4.trs([s * 0.12, -0.22, 0], 0, sw, 0), { outline: 0.9 });
+    }
+  }
+}

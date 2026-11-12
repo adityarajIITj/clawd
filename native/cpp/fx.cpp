@@ -26,6 +26,7 @@ enum Type : int {
     EMBER    = 5,  // rising embers / heat glyphs
     RING     = 6,  // expanding shock ring (horizontal)
     SNOW     = 7,  // slow falling flakes / sand grains with wind
+    RAIN     = 8,  // monsoon drizzle: fast, thin, wind-slanted
 };
 
 struct Particle {
@@ -112,6 +113,12 @@ void spawnAmbient(float cx, float cy, float cz) {
             p->vx = gWindX; p->vy = frange(-1.6f, -0.6f); p->vz = gWindZ;
             p->maxLife = frange(6.0f, 11.0f);
             p->size0 = p->size1 = frange(0.05f, 0.11f);
+            break;
+        case RAIN:
+            p->y = cy + frange(2.0f, 20.0f);
+            p->vx = gWindX * 2.0f; p->vy = frange(-15.0f, -11.0f); p->vz = gWindZ * 2.0f;
+            p->maxLife = frange(1.6f, 2.4f);
+            p->size0 = p->size1 = frange(0.025f, 0.045f);
             break;
         case EMBER:
             p->y = cy + frange(-12.0f, 2.0f);
@@ -299,7 +306,7 @@ EXPORT int fx_update(float dt, float t, float cx, float cy, float cz) {
             // fade in & out, plus twinkle
             float fin = u * 5.0f; if (fin > 1.0f) fin = 1.0f;
             float fout = (1.0f - u) * 4.0f; if (fout > 1.0f) fout = 1.0f;
-            alpha = fin * fout * (0.65f + 0.35f * fsin(t * 3.0f + p.seed * 7.0f));
+            alpha = fin * fout * (p.type == RAIN ? 0.7f : (0.65f + 0.35f * fsin(t * 3.0f + p.seed * 7.0f)));
         } else if (p.type == CONFETTI) {
             alpha = u < 0.8f ? 1.0f : (1.0f - u) * 5.0f;
         } else {

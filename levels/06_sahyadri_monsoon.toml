@@ -1,0 +1,249 @@
+# ============================================================================
+#  MARATHI MANUS · WORLD 1 — SAHYADRI MONSOON
+#  Misty Western Ghats in the rains. Old fort walls, waterfalls, gentle paths.
+# ============================================================================
+[level]
+id = 6
+campaign = "manus"
+name = "Sahyadri Monsoon"
+subtitle = "Rain on the ghats, and nowhere you need to be"
+story = "The first rains have reached the Sahyadris. Mist rolls over the old fort walls and every rock is busy with little lizards. Marathi Manus pockets his phone, ties up his bun, and heads uphill — slowly, because the monsoon is meant to be enjoyed."
+music = "sahyadri"
+seed = 6606
+spawn = [0, 0.5, 0]
+goal = [-14, 6, 93]
+parTime = 120
+
+[theme]
+skyTop = "#6f8fa8"
+skyHorizon = "#d6e2dc"
+skyBottom = "#e8efe8"
+sunColor = "#fff2dc"
+sunDir = [-0.4, 0.6, -0.5]
+sunIntensity = 1.9
+ambSky = "#b4cadb"
+ambGround = "#7a9a70"
+fogColor = "#d4e0da"
+fogDensity = 0.0085
+floor = "clouds"
+floorY = -16
+floorColor = "#eef4ee"
+floorColor2 = "#b4c6be"
+clouds = 0.85
+stars = 0
+bloom = 0.4
+exposure = 1.0
+saturation = 1.02
+contrast = 1.0
+particles = "rain"
+particleColor = "#cfe4f0"
+accent = "#5aa080"
+wind = [0.3, 0.2]
+
+[[island]]
+pos = [0, 0, 0]
+radius = 8
+style = "ghat"
+decor = "sahyadri"
+
+[[island]]
+pos = [0, 2, 30]
+radius = 7
+style = "ghat"
+decor = "sahyadri"
+density = 0.7
+
+[[island]]
+pos = [6, 7, 46]
+radius = 6
+style = "fort"
+decor = "sahyadri"
+density = 0.5
+
+[[island]]
+pos = [-20, 10, 58]
+radius = 3
+style = "ghat"
+
+[[island]]
+pos = [-14, 8, 70]
+radius = 7
+style = "ghat"
+decor = "sahyadri"
+density = 0.8
+
+[[island]]
+pos = [-14, 6, 90]
+radius = 8
+style = "ghat"
+decor = "sahyadri"
+density = 0.6
+
+# distant ghats
+[[island]]
+pos = [-50, 14, 30]
+radius = 16
+shape = "pillar"
+depth = 36
+style = "ghat"
+decor = "sahyadri"
+density = 0.4
+
+[[island]]
+pos = [45, 20, 80]
+radius = 18
+shape = "pillar"
+depth = 42
+style = "ghat"
+decor = "sahyadri"
+density = 0.35
+
+[[island]]
+pos = [-40, 8, 120]
+radius = 12
+style = "ghat"
+decor = "sahyadri"
+density = 0.4
+
+[[path]]
+from = [0, 0.4, 12]
+to = [0, 1.2, 20]
+count = 3
+radius = 1.6
+style = "fort"
+
+# fort wall steps
+[[block]]
+pos = [6, 3, 30]
+size = [3, 1.5, 3]
+style = "fort"
+
+[[block]]
+pos = [9, 4.5, 33]
+size = [3, 1.5, 3]
+style = "fort"
+
+[[block]]
+pos = [9, 6, 37]
+size = [3, 1.5, 3]
+style = "fort"
+
+[[block]]
+pos = [12, 9, 40]
+size = [2.5, 1, 2.5]
+style = "fort"
+
+[[path]]
+from = [0, 7, 54]
+to = [-8, 7.5, 62]
+count = 3
+radius = 1.6
+style = "fort"
+move = { type = "bob", amp = 0.6, speed = 0.8, stagger = 1.0 }
+
+[[path]]
+from = [-14, 7.2, 80]
+to = [-14, 6.6, 83.5]
+count = 2
+shape = "block"
+size = [3, 0.6, 3]
+style = "wood"
+
+[[bouncer]]
+pos = [-10, 6, 94]
+power = 22
+
+[[disc]]
+pos = [-6, 13, 98]
+radius = 1.8
+style = "fort"
+
+[[sparks]]
+type = "ring"
+center = [0, 1.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 3.2, 30]
+radius = 3.5
+count = 7
+
+[[sparks]]
+type = "line"
+from = [6, 4.2, 30]
+to = [9, 7.2, 37]
+count = 4
+
+[[sparks]]
+type = "ring"
+center = [6, 8.2, 46]
+radius = 3.5
+count = 7
+
+[[sparks]]
+type = "ring"
+center = [-14, 9.2, 70]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "line"
+from = [-14, 7.2, 86]
+to = [-14, 7.2, 92]
+count = 4
+
+[[token]]
+pos = [12, 9.8, 40]
+
+[[token]]
+pos = [-20, 10.8, 58]
+
+[[token]]
+pos = [-6, 13.8, 98]
+
+[[checkpoint]]
+pos = [3, 7, 44]
+
+[[checkpoint]]
+pos = [-11, 8, 68]
+
+[[enemy]]
+type = "glitchling"
+a = [-18, 8, 72]
+b = [-10, 8, 72]
+speed = 1.5
+
+[[hint]]
+pos = [0, 0, 0]
+radius = 5
+text = "Monsoon in the Sahyadris. Take it slow — there's no rush here"
+
+[[hint]]
+pos = [0, 0, 7]
+radius = 3
+text = "Lizards love the rain. Scoop up every one you see"
+
+[[hint]]
+pos = [3, 2, 28]
+radius = 3
+text = "Climb the old fort steps. Three <b>Komodo dragons</b> are hiding in every world"
+
+[[decor]]
+mesh = "waterfall"
+pos = [12.1, 6.8, 46]
+rot = 1.57
+size = [3, 20]
+
+[[decor]]
+mesh = "waterfall"
+pos = [-34, 13.8, 30]
+rot = 1.57
+size = [7, 40]
+
+[[decor]]
+mesh = "waterfall"
+pos = [27, 19.8, 80]
+rot = -1.57
+size = [8, 44]

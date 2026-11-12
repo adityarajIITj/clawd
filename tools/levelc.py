@@ -50,6 +50,12 @@ STYLES: dict[str, dict[str, list[float]]] = {
     "stone":    {"top": hexc("d8d2c4"), "side": hexc("a8a294"), "rock": hexc("807a70")},
     "wood":     {"top": hexc("c98a55"), "side": hexc("a0673d"), "rock": hexc("7a4b2a")},
     "terracotta":{"top": hexc("e08a63"), "side": hexc("d97757"), "rock": hexc("a8553a")},
+    "ghat":     {"top": hexc("6fae5a"), "side": hexc("6a6a66"), "rock": hexc("4a4c4e")},
+    "fort":     {"top": hexc("8a9a7a"), "side": hexc("707276"), "rock": hexc("54565a")},
+    "laterite": {"top": hexc("c86a4a"), "side": hexc("b4553a"), "rock": hexc("8a3f2c")},
+    "beach":    {"top": hexc("f2d9a8"), "side": hexc("c4643f"), "rock": hexc("963f2c")},
+    "lakeshore":{"top": hexc("4f8a5a"), "side": hexc("8a5a44"), "rock": hexc("5a3a34")},
+    "lotus":    {"top": hexc("f2a6c0"), "side": hexc("5f9a5a"), "rock": hexc("3f6a3f")},
     "cloud":    {"top": hexc("fff6ea"), "side": hexc("f2e3d0"), "rock": hexc("e6d2bd")},
 }
 
@@ -60,6 +66,9 @@ DECOR_PRESETS: dict[str, list[tuple[str, float, float, float]]] = {
     "desert":  [("cactus", 3, 0.8, 1.4), ("rock", 4, 0.6, 1.5), ("bush", 1, 0.5, 0.8)],
     "crystal": [("crystal", 4, 0.6, 1.6), ("shroom", 4, 0.7, 1.3), ("rock", 1, 0.5, 1.0)],
     "citadel": [("column", 2, 0.9, 1.2), ("brazier", 2, 1, 1), ("rock", 1, 0.5, 0.9)],
+    "sahyadri": [("tree", 3, 0.9, 1.5), ("bush", 3, 0.8, 1.3), ("marigold", 2, 0.9, 1.2), ("rock", 3, 0.6, 1.3), ("flower", 2, 0.8, 1.2)],
+    "konkan":  [("palm", 4, 0.9, 1.4), ("bush", 2, 0.8, 1.2), ("marigold", 1, 0.9, 1.1), ("rock", 2, 0.6, 1.1)],
+    "festival": [("kandil", 1.5, 0.9, 1.1), ("diya", 3, 0.9, 1.3), ("marigold", 3, 0.9, 1.3), ("tree", 1, 0.9, 1.2), ("bush", 1, 0.8, 1.1)],
     "none": [],
 }
 COLLIDE_DECOR = {"tree": 0.35, "palm": 0.3, "cactus": 0.4, "column": 0.55, "brazier": 0.45}
@@ -177,7 +186,7 @@ class Compiler:
         self.islands.append({"pos": [x, y, z], "radius": r, "decor": e.get("decor", "none"),
                              "density": e.get("density", 1.0), "moving": bool(e.get("move")),
                              "solid": len(self.solids) - (2 if shape == "pillar" and depth - thick > 0.5 else 1),
-                             "grass": e.get("grass", e.get("decor") in ("meadow", "jungle"))})
+                             "grass": e.get("grass", e.get("decor") in ("meadow", "jungle", "sahyadri", "festival"))})
 
     def block(self, e: dict):
         x, y, z = e["pos"]
@@ -291,7 +300,7 @@ class Compiler:
                 rad = math.sqrt(self.rng.random()) * r * 0.86
                 px, pz = x + math.cos(ang) * rad, z + math.sin(ang) * rad
                 mesh, _, s0, s1 = self.rng.choices(preset, weights)[0]
-                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6}.get(mesh, 1.0)
+                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6, "kandil": 2.4}.get(mesh, 1.0)
                 # big collidable things stay on the outer ring so the centre path is clear
                 if mesh in COLLIDE_DECOR and rad < r * 0.5:
                     continue
@@ -434,6 +443,7 @@ class Compiler:
 
         out = {
             "id": L["id"],
+            "campaign": L.get("campaign", "clawd"),
             "name": L["name"],
             "subtitle": L.get("subtitle", ""),
             "story": L.get("story", ""),
@@ -475,7 +485,7 @@ def main() -> int:
             failed = True
             continue
         (out_dir / f"{f.stem}.json").write_text(json.dumps(lvl, separators=(",", ":")), encoding="utf-8")
-        manifest.append({"id": lvl["id"], "file": f"{f.stem}.json", "name": lvl["name"], "subtitle": lvl["subtitle"],
+        manifest.append({"id": lvl["id"], "campaign": lvl["campaign"], "file": f"{f.stem}.json", "name": lvl["name"], "subtitle": lvl["subtitle"],
                          "theme": {k: lvl["theme"][k] for k in ("skyTop", "skyHorizon", "accent") if k in lvl["theme"]},
                          "sparks": len(lvl["sparks"]), "parTime": lvl["parTime"]})
         print(f"  [level] {f.stem:22s} {stats}")

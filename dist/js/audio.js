@@ -1,7 +1,23 @@
 // WebAudio engine: buffered SFX with pitch variation + crossfading music.
 const SFX = ['jump', 'djump', 'land', 'step', 'spark', 'token', 'stomp', 'hurt', 'pound', 'pound_land', 'bounce',
   'checkpoint', 'win', 'fall', 'click', 'hover', 'portal', 'zap'];
-const MUSIC = ['title', 'meadows', 'falls', 'dunes', 'nebula', 'citadel'];
+const MUSIC = ['title', 'meadows', 'falls', 'dunes', 'nebula', 'citadel', 'manus', 'sahyadri', 'konkan', 'kandil'];
+
+// A player-chosen song lives only in this browser (IndexedDB) and is never uploaded.
+const DB = 'clawd-audio', STORE = 'custom';
+function idb(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB, 1);
+    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const tx = req.result.transaction(STORE, mode);
+      const r = fn(tx.objectStore(STORE));
+      tx.oncomplete = () => resolve(r && r.result);
+      tx.onerror = () => reject(tx.error);
+    };
+  });
+}
 
 export class Audio {
   constructor() {
@@ -15,6 +31,8 @@ export class Audio {
       if (saved) Object.assign(this.vol, saved);
     } catch (_) { /* ignore */ }
     this.lastPlay = {};
+    this.custom = null;      // { name, buffer }
+    this.useCustom = false;  // true while Marathi Manus is the active hero
   }
 
   async init(onProgress) {
@@ -57,6 +75,40 @@ export class Audio {
     return this.loading[key];
   }
 
+  async loadCustom() {
+    try {
+      const rec = await idb('readonly', (s) => s.get('song'));
+      if (rec && rec.data) this.custom = { name: rec.name, buffer: await this.ctx.decodeAudioData(rec.data.slice(0)) };
+    } catch (e) { console.warn('custom song unavailable', e); }
+  }
+
+  async setCustom(file) {
+    const data = await file.arrayBuffer();
+    const buffer = await this.ctx.decodeAudioData(data.slice(0));
+    await idb('readwrite', (s) => s.put({ name: file.name, data }, 'song'));
+    this.custom = { name: file.name, buffer };
+    this.restartMusic();
+  }
+
+  async clearCustom() {
+    await idb('readwrite', (s) => s.delete('song'));
+    this.custom = null;
+    this.restartMusic();
+  }
+
+  setUseCustom(on) {
+    if (this.useCustom === !!on) return;
+    this.useCustom = !!on;
+    this.restartMusic();
+  }
+
+  restartMusic() {
+    const n = this.wantMusic || this.musicName;
+    this.musicName = null;
+    this.forceRestart = true;
+    if (n) this.playMusic(n, 0.8);
+  }
+
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
 
   applyVolumes() {
@@ -86,8 +138,12 @@ export class Audio {
   playMusic(name, fade = 1.5) {
     if (!this.ctx || this.musicName === name) return;
     this.wantMusic = name;
-    const buf = this.buffers[`music_${name}`];
-    if (!buf) {
+    const custom = this.useCustom && this.custom;
+    const buf = custom ? this.custom.buffer : this.buffers[`music_${name}`];
+    // the player's own song keeps playing across worlds instead of restarting
+    if (custom && this.music && this.music.custom && !this.forceRestart) { this.musicName = name; return; }
+    this.forceRestart = false;
+    if (!buf && !custom) {
       // start when it arrives, unless the player has moved on to another track
       this.loadTrack(name).then((b) => { if (b && this.wantMusic === name) this.playMusic(name, fade); });
       return;
@@ -108,7 +164,7 @@ export class Audio {
     gain.gain.linearRampToValueAtTime(1, now + fade);
     src.connect(gain).connect(this.musicBus);
     src.start();
-    this.music = { src, gain };
+    this.music = { src, gain, custom: !!custom };
     this.musicName = name;
   }
 

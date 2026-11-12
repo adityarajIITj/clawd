@@ -3,7 +3,8 @@ import { Renderer, lin } from './gl.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { Camera } from './camera.js';
-import { Clawd } from './player.js';
+import { Clawd, Manus } from './player.js';
+import { buildManus, buildLizard, buildKomodo } from './meshes_mh.js';
 import { World } from './level.js';
 import { UI, fmtTime, starIcon } from './ui.js';
 import { loadNative } from './wasm.js';
@@ -24,7 +25,8 @@ class Game {
     this.isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
     if (this.isTouch && !localStorage.getItem('clawd.settings')) this.settings.quality = 'low';
     this.applyQualityPreset(false);
-    this.save = Object.assign({ unlocked: 1, levels: {} }, JSON.parse(localStorage.getItem('clawd.save') || '{}'));
+    this.character = localStorage.getItem('clawd.character') === 'manus' ? 'manus' : 'clawd';
+    this.save = Object.assign({ unlocked: 1, unlockedManus: 6, levels: {} }, JSON.parse(localStorage.getItem('clawd.save') || '{}'));
     this.ui = new UI(this);
     this.input = new Input(this.canvas);
     this.audio = new Audio();
@@ -77,13 +79,19 @@ class Game {
         laser: M.buildLaserPost(r),
         shadow: M.buildShadowDisc(r),
         halo: M.buildHalo(r),
+        manus: buildManus(r),
+        lizard: buildLizard(r),
+        komodo: buildKomodo(r),
       };
-      this.player = new Clawd(this.shared.clawd);
+      this.players = { clawd: new Clawd(this.shared.clawd), manus: new Manus(this.shared.manus) };
+      this.player = this.players[this.character];
       this.ui.setLoading(0.5, 'Composing the soundtrack…');
       await this.audio.init((p) => this.ui.setLoading(0.5 + p * 0.45, 'Tuning the sound effects…'));
-      this.audio.loadTrack('title');
+      await this.audio.loadCustom();
+      this.audio.setUseCustom(this.character === 'manus');
+      this.audio.loadTrack(this.titleTrack());
       this.ui.setLoading(1, 'Ready');
-      this.loadWorld(1);
+      this.loadWorld(this.homeWorld());
       this.toTitle();
       this.ui.hideLoading();
     } catch (e) {
@@ -128,14 +136,54 @@ class Game {
     this.ui.resetHUD();
   }
 
+  isManus() { return this.character === 'manus'; }
+  homeWorld() { return this.isManus() ? 6 : 1; }
+  titleTrack() { return this.isManus() ? 'manus' : 'title'; }
+  campaignOf(id) { return this.levels[id]?.campaign || 'clawd'; }
+  isLocked(id) { return this.campaignOf(id) === 'manus' ? id > (this.save.unlockedManus || 6) : id > this.save.unlocked; }
+  words() {
+    return this.isManus()
+      ? { spark: 'Lizard', sparks: 'Lizards', token: 'Komodo Dragon', tokens: 'Komodo dragons' }
+      : { spark: 'Spark', sparks: 'Sparks', token: 'Golden Token', tokens: 'Tokens' };
+  }
+
+  setCharacter(c) {
+    this.character = c;
+    localStorage.setItem('clawd.character', c);
+    this.player = this.players[c];
+    this.audio.setUseCustom(c === 'manus');
+    this.ui.setCollectibleIcons(c);
+    this.levelId = 0;
+    this.toTitle();
+  }
+
+  showCharacters() {
+    this.state = 'select';
+    const card = (id, name, sub, art) => `
+      <button class="card char ${this.character === id ? 'picked' : ''}" data-act="pick-char" data-id="${id}">
+        <div class="card-art char-art ${id}">${art}${this.character === id ? '<div class="picked-tag">Selected</div>' : ''}</div>
+        <div class="card-body"><div class="card-title">${name}</div><div class="card-sub">${sub}</div></div>
+      </button>`;
+    this.ui.show('characters', `
+      <div class="select-wrap chars">
+        <h2>Choose your hero</h2>
+        <div class="cards two">
+          ${card('clawd', 'Clawd', 'A small, helpful terracotta critter. Collects Sparks across the five Spark Realms.', CLAWD_ART)}
+          ${card('manus', 'Marathi Manus', 'Man bun, neckband, phone always ready. Collects lizards and Komodo dragons, and unlocks three soothing Maharashtra worlds.', MANUS_ART)}
+        </div>
+        <div class="row"><button data-act="title" class="ghost">Back</button></div>
+      </div>`, 'select');
+  }
+
   toTitle() {
     this.state = 'title';
-    if (this.levelId !== 1) this.loadWorld(1);
+    if (this.levelId !== this.homeWorld()) this.loadWorld(this.homeWorld());
+    this.ui.setCollectibleIcons(this.character);
     this.cam.mode = 'orbit';
     this.ui.showHUD(false);
     this.input.wantLock = false;
     this.input.releaseLock();
-    this.audio.playMusic('title');
+    this.audio.playMusic(this.titleTrack());
     this.ui.show('title', `
       <div class="title-wrap">
         <div class="logo">
@@ -145,6 +193,7 @@ class Game {
         </div>
         <div class="menu">
           <button data-act="play">Play</button>
+          <button data-act="characters">Hero: ${this.isManus() ? 'Marathi Manus' : 'Clawd'}</button>
           <button data-act="settings">Settings</button>
           <button data-act="howto">How to Play</button>
           <button data-act="credits">Credits</button>
@@ -155,11 +204,11 @@ class Game {
 
   showSelect() {
     this.state = 'select';
-    const cards = this.manifest.map((m) => {
+    const card = (m) => {
       const lv = this.levels[m.id];
       const th = lv.theme;
       const rec = this.save.levels[m.id] || {};
-      const locked = m.id > this.save.unlocked;
+      const locked = this.isLocked(m.id);
       const toks = rec.tokens || [false, false, false];
       const grad = `linear-gradient(180deg, ${rgb(th.skyTop)} 0%, ${rgb(th.skyHorizon)} 62%, ${rgb(th.floorColor)} 100%)`;
       return `
@@ -180,11 +229,17 @@ class Game {
             </div>
           </div>
         </button>`;
-    }).join('');
+    };
+    const mh = this.manifest.filter((m) => m.campaign === 'manus');
+    const base = this.manifest.filter((m) => m.campaign !== 'manus');
+    const cards = this.isManus()
+      ? `<div class="campaign-label">Maharashtra Tales</div><div class="cards three">${mh.map(card).join('')}</div>
+         <div class="campaign-label">The Spark Realms</div><div class="cards">${base.map(card).join('')}</div>`
+      : `<div class="cards">${base.map(card).join('')}</div>`;
     this.ui.show('select', `
       <div class="select-wrap">
         <h2>Choose a World</h2>
-        <div class="cards">${cards}</div>
+        ${cards}
         <div class="row"><button data-act="title" class="ghost">Back</button></div>
       </div>`, 'select');
   }
@@ -201,7 +256,7 @@ class Game {
     this.cam.startCine({ pos: [goal[0] + 18, goal[1] + 22, goal[2] + 20], look: goal }, behind, 6.5, () => { this.cam.mode = 'hold'; });
     this.ui.show('intro', `
       <div class="intro">
-        <div class="kicker">World ${id}</div>
+        <div class="kicker">${lv.campaign === 'manus' ? `Maharashtra · World ${id - 5}` : `World ${id}`}</div>
         <h2>${lv.name}</h2>
         <div class="sub">${lv.subtitle}</div>
         <p class="story">${lv.story}</p>
@@ -217,7 +272,7 @@ class Game {
     this.state = 'play';
     this.ui.showHUD(true);
     this.input.wantLock = true;
-    this.ui.showBanner(lv.name, `World ${lv.id}`);
+    this.ui.showBanner(lv.name, lv.campaign === 'manus' ? `Maharashtra · World ${lv.id - 5}` : `World ${lv.id}`);
   }
 
   pause() {
@@ -246,6 +301,10 @@ class Game {
   action(act, data) {
     switch (act) {
       case 'play': this.showSelect(); break;
+      case 'characters': this.showCharacters(); break;
+      case 'pick-char': this.setCharacter(data.id); break;
+      case 'pick-song': document.getElementById('songFile')?.click(); break;
+      case 'clear-song': this.audio.clearCustom().then(() => this.showSettings()); break;
       case 'select': this.audio.duck(1); this.showSelect(); if (this.levelId) this.ui.showHUD(false); break;
       case 'title': this.toTitle(); break;
       case 'world': this.startWorld(+data.id); break;
@@ -254,7 +313,7 @@ class Game {
       case 'restart': this.audio.duck(1); this.startWorld(this.levelId); break;
       case 'next': {
         const n = this.levelId + 1;
-        if (this.levels[n]) this.startWorld(n); else this.showEnding();
+        if (this.levels[n] && this.campaignOf(n) === this.campaignOf(this.levelId)) this.startWorld(n); else this.showEnding();
         break;
       }
       case 'settings': this.showSettings(); break;
@@ -281,12 +340,21 @@ class Game {
           ${slider('sens', 'Camera sensitivity', s.sens, 0.3, 2.5, 0.1)}
           <label class="set"><span>Graphics quality</span>
             <select data-key="quality">${['low', 'medium', 'high'].map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select></label>
+          <div class="set song"><span>Marathi Manus music<small>${this.audio.custom ? `Your song: ${escapeHtml(this.audio.custom.name)}` : 'Original folk soundtrack · or pick your own song (stays on this device)'}</small></span>
+            <span class="song-btns"><button data-act="pick-song" class="mini">${this.audio.custom ? 'Change' : 'Choose file'}</button>${this.audio.custom ? '<button data-act="clear-song" class="mini ghost-mini">Remove</button>' : ''}</span>
+            <input type="file" id="songFile" accept="audio/*" hidden></div>
           <label class="set"><span>Invert camera Y</span><input type="checkbox" data-key="invertY" ${s.invertY ? 'checked' : ''}></label>
           <label class="set"><span>Show FPS</span><input type="checkbox" data-key="fps" ${s.fps ? 'checked' : ''}></label>
         </div>
         <div class="row"><button data-act="settings-back">Done</button></div>
       </div>`, this.prevState === 'paused' ? 'dim' : '');
     if (this.prevState === 'paused') this.state = 'paused';
+    const f = document.getElementById('songFile');
+    if (f) f.addEventListener('change', async () => {
+      if (!f.files[0]) return;
+      try { await this.audio.setCustom(f.files[0]); } catch (e) { alert('That file could not be played. Try an MP3, M4A, OGG or WAV.'); }
+      this.showSettings();
+    });
   }
 
   setSetting(key, value) {
@@ -314,7 +382,7 @@ class Game {
           <div><kbd>📱</kbd><span>Touch: drag left side to move · drag right side to look · Jump &amp; Pound buttons · ❚❚ to pause</span></div>
           <div><kbd>🎮</kbd><span>Gamepad: left stick move · A jump · X / triggers pound · right stick camera</span></div>
         </div>
-        <p class="note">Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world.</p>
+        <p class="note">Playing as <b>Marathi Manus</b>? Sparks become little lizards and Tokens become Komodo dragons. Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world.</p>
         <div class="row"><button data-act="title">Back</button></div>
       </div>`);
   }
@@ -323,7 +391,9 @@ class Game {
     this.ui.show('credits', `
       <div class="panel wide">
         <h2>Credits</h2>
-        <p class="note center">A small adventure starring Clawd, Claude's helpful little mascot.</p>
+        <p class="note center"><b>CLAWD: The Spark Odyssey</b><br>Created by <b>Aditya</b></p>
+        <p class="note center">A fan-made meme game starring Clawd, Claude's helpful little mascot. Made for fun — not for commercial use.</p>
+        <p class="note center">Inspired by the song <b>“Vaat Majhi”</b> — sung by Reshma Sonawane, featuring Sara Shrawan. All rights belong to the original artists.</p>
         <div class="credits">
           <div><b>Rendering</b><span>WebGL2 · custom GLSL: soft shadows, HDR bloom, ACES tonemapping, illustrative toon lighting</span></div>
           <div><b>Gameplay core</b><span>Rust → WebAssembly: character controller &amp; procedural island sculpting</span></div>
@@ -336,6 +406,7 @@ class Game {
   }
 
   showEnding() {
+    if (this.campaignOf(this.levelId) === 'manus') return this.showManusEnding();
     this.state = 'ending';
     this.ui.showHUD(false);
     this.audio.playMusic('title');
@@ -346,6 +417,21 @@ class Game {
         <h2>The Great Context Window is restored</h2>
         <p class="story">Spark by spark, Clawd carried every lost thought home. The Window glows again over the five realms, wide enough to hold every question anyone might ask. Somewhere in the meadows, a new prompt is already being written.</p>
         <p class="note center">Golden Tokens found: <b>${total} / 15</b></p>
+        <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
+      </div>`);
+  }
+
+  showManusEnding() {
+    this.state = 'ending';
+    this.ui.showHUD(false);
+    this.audio.playMusic('manus');
+    const ids = [6, 7, 8];
+    const total = ids.reduce((a, id) => a + ((this.save.levels[id] || {}).tokens || []).filter(Boolean).length, 0);
+    this.ui.show('ending', `
+      <div class="panel wide ending">
+        <h2>Ghari aalo! — Home at last</h2>
+        <p class="story">From the misty Sahyadri forts to the Konkan pier to the lantern-lit lake, Marathi Manus took the slow road and found every corner worth finding. The kandils are glowing, the chai is hot, and the lizards are fast asleep.</p>
+        <p class="note center">Komodo dragons found: <b>${total} / 9</b></p>
         <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
       </div>`);
   }
@@ -422,18 +508,22 @@ class Game {
       rank: !rec.rank || ranks.indexOf(rank) > ranks.indexOf(rec.rank) ? rank : rec.rank,
       done: true,
     };
-    this.save.unlocked = Math.max(this.save.unlocked, Math.min(this.manifest.length, this.levelId + 1));
+    const camp = this.campaignOf(this.levelId);
+    const lastId = Math.max(...this.manifest.filter((m) => (m.campaign || 'clawd') === camp).map((m) => m.id));
+    if (camp === 'manus') this.save.unlockedManus = Math.max(this.save.unlockedManus || 6, Math.min(lastId, this.levelId + 1));
+    else this.save.unlocked = Math.max(this.save.unlocked, Math.min(lastId, this.levelId + 1));
     localStorage.setItem('clawd.save', JSON.stringify(this.save));
-    const hasNext = !!this.levels[this.levelId + 1];
+    const hasNext = this.levelId < lastId;
+    const W = this.words();
     setTimeout(() => {
       this.ui.show('results', `
         <div class="panel results">
-          <div class="kicker">World ${this.levelId} complete</div>
+          <div class="kicker">${camp === 'manus' ? `Maharashtra · World ${this.levelId - 5}` : `World ${this.levelId}`} complete</div>
           <h2>${lv.name}</h2>
           <div class="rank-big r-${rank}">${rank}</div>
           <div class="res-grid">
-            <div><span>Sparks</span><b>${w.sparkGot} / ${w.sparkTotal}</b></div>
-            <div><span>Tokens</span><b class="tok">${tokens.map((t) => `<i class="${t ? 'on' : ''}"></i>`).join('')}</b></div>
+            <div><span>${W.sparks}</span><b>${w.sparkGot} / ${w.sparkTotal}</b></div>
+            <div><span>${W.tokens}</span><b class="tok">${tokens.map((t) => `<i class="${t ? 'on' : ''}"></i>`).join('')}</b></div>
             <div><span>Time</span><b>${fmtTime(this.levelTime)}${newBest ? ' <em>best!</em>' : ''}</b></div>
           </div>
           <div class="menu">
@@ -579,7 +669,7 @@ class Game {
         }
       } else if (e.type === 'token') {
         this.audio.play('token', { vol: 0.9 });
-        this.ui.popup(`Golden Token ${this.world.tokenGot.filter(Boolean).length} / 3`, 'token');
+        this.ui.popup(`${this.words().token} ${this.world.tokenGot.filter(Boolean).length} / 3`, 'token');
         this.cam.shake = 0.3;
       } else if (e.type === 'checkpoint') {
         this.audio.play('checkpoint', { vol: 0.7 });
@@ -640,6 +730,29 @@ class Game {
   }
 }
 
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+const CLAWD_ART = `<svg viewBox="0 0 200 150" class="char-svg"><ellipse cx="100" cy="132" rx="60" ry="8" fill="rgba(0,0,0,.18)"/>
+  <rect x="48" y="40" width="104" height="78" rx="22" fill="#d97757" stroke="#3a1f16" stroke-width="4"/>
+  <rect x="36" y="70" width="18" height="24" rx="7" fill="#d97757" stroke="#3a1f16" stroke-width="4"/><rect x="146" y="70" width="18" height="24" rx="7" fill="#d97757" stroke="#3a1f16" stroke-width="4"/>
+  <rect x="78" y="62" width="11" height="24" rx="5" fill="#1f1a17"/><rect x="111" y="62" width="11" height="24" rx="5" fill="#1f1a17"/>
+  <ellipse cx="68" cy="94" rx="7" ry="4" fill="#f2a08a"/><ellipse cx="132" cy="94" rx="7" ry="4" fill="#f2a08a"/>
+  <rect x="64" y="116" width="16" height="16" rx="5" fill="#b85c3f"/><rect x="120" y="116" width="16" height="16" rx="5" fill="#b85c3f"/>
+  <line x1="100" y1="40" x2="100" y2="24" stroke="#b85c3f" stroke-width="4"/><polygon points="100,8 104,19 115,20 106,26 109,37 100,30 91,37 94,26 85,20 96,19" fill="#ffb37a"/></svg>`;
+const MANUS_ART = `<svg viewBox="0 0 200 150" class="char-svg"><ellipse cx="100" cy="146" rx="58" ry="6" fill="rgba(0,0,0,.18)"/>
+  <path d="M52 150 Q54 110 100 104 Q146 110 148 150Z" fill="#e6e3dc" stroke="#2a2220" stroke-width="3"/>
+  <circle cx="112" cy="130" r="8" fill="#d8484a"/><circle cx="112" cy="130" r="5" fill="#e6e3dc"/>
+  <path d="M72 108 Q100 124 128 108" fill="none" stroke="#222226" stroke-width="5"/>
+  <ellipse cx="100" cy="66" rx="34" ry="38" fill="#b47a56" stroke="#2a2220" stroke-width="3"/>
+  <path d="M68 78 Q72 104 100 106 Q128 104 132 78 Q120 92 100 92 Q80 92 68 78Z" fill="#3b2a22"/>
+  <path d="M65 62 Q62 26 100 26 Q138 26 135 62 Q128 40 100 38 Q72 40 65 62Z" fill="#17110f"/>
+  <circle cx="100" cy="18" r="11" fill="#17110f"/><rect x="94" y="25" width="12" height="5" rx="2" fill="#3a3236"/>
+  <ellipse cx="87" cy="64" rx="4" ry="5" fill="#120c0a"/><ellipse cx="113" cy="64" rx="4" ry="5" fill="#120c0a"/>
+  <path d="M80 54 L93 52 M107 52 L120 54" stroke="#17110f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M90 86 Q100 82 110 86" stroke="#241814" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <ellipse cx="100" cy="93" rx="6" ry="5" fill="#e0707a"/>
+  <rect x="150" y="62" width="20" height="36" rx="4" fill="#16161a" transform="rotate(12 160 80)"/></svg>`;
+
 function rgb(c) { return `rgb(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)})`; }
 
 // little illustrated vignettes for the world cards (inline SVG)
@@ -649,6 +762,9 @@ function artFor(id) {
     2: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="30" y="30" width="34" height="80" rx="4" fill="#5d6b6a"/><rect x="30" y="26" width="34" height="8" rx="3" fill="#4fae6e"/><rect x="120" y="45" width="40" height="65" rx="4" fill="#7c8a86"/><rect x="120" y="41" width="40" height="8" rx="3" fill="#6fbf7a"/><rect x="62" y="34" width="9" height="76" fill="#c4ecf0" opacity=".85"/><rect x="78" y="62" width="30" height="6" rx="3" fill="#c98a55"/></svg>`,
     3: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="150" cy="48" r="16" fill="#fff0c8"/><rect x="24" y="40" width="40" height="70" fill="#d9895b"/><rect x="24" y="36" width="40" height="7" fill="#f2b880"/><rect x="100" y="60" width="50" height="50" fill="#b0603f"/><rect x="100" y="56" width="50" height="7" fill="#f0c987"/><rect x="40" y="31" width="22" height="2" fill="#ff6a3a"/></svg>`,
     4: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="30" cy="20" r="1.5" fill="#fff"/><circle cx="90" cy="12" r="1" fill="#fff"/><circle cx="170" cy="25" r="1.5" fill="#fff"/><ellipse cx="60" cy="62" rx="30" ry="7" fill="#8fe3ff"/><path d="M30 62 L60 98 L90 62Z" fill="#5a5fb8"/><ellipse cx="145" cy="45" rx="22" ry="5" fill="#d4a6ff"/><path d="M123 45 L145 75 L167 45Z" fill="#6a4fa8"/><path d="M55 60 L60 40 L65 60Z" fill="#7ae8ff"/></svg>`,
+    6: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M0 110 L0 60 Q40 30 70 55 Q100 25 140 50 Q170 35 200 55 L200 110Z" fill="#4f7a52"/><rect x="60" y="58" width="60" height="22" fill="#6e7276"/><rect x="60" y="52" width="8" height="8" fill="#6e7276"/><rect x="80" y="52" width="8" height="8" fill="#6e7276"/><rect x="100" y="52" width="8" height="8" fill="#6e7276"/><rect x="130" y="50" width="6" height="60" fill="#e8f0f2" opacity=".85"/><g stroke="#cfe4f0" stroke-width="1.5" opacity=".8"><line x1="20" y1="5" x2="16" y2="18"/><line x1="60" y1="10" x2="56" y2="23"/><line x1="110" y1="2" x2="106" y2="15"/><line x1="170" y1="8" x2="166" y2="21"/></g></svg>`,
+    7: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="150" cy="58" r="14" fill="#ffe0a0"/><rect x="0" y="80" width="200" height="30" fill="#2aa0b0"/><rect x="20" y="50" width="40" height="60" fill="#b4553a"/><rect x="20" y="46" width="40" height="7" fill="#f2d9a8"/><path d="M40 46 Q42 20 46 14" stroke="#7a5a3a" stroke-width="3" fill="none"/><path d="M46 14 q-14 -2 -20 6 M46 14 q12 -4 18 4 M46 14 q-4 -10 -12 -12 M46 14 q8 -8 14 -8" stroke="#4f9a3a" stroke-width="4" fill="none"/><path d="M110 84 L150 84 L144 92 L116 92Z" fill="#3d6fb0"/><path d="M130 84 L130 62 L142 82Z" fill="#f6eedc"/></svg>`,
+    8: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="0" y="80" width="200" height="30" fill="#1a2a5a"/><circle cx="30" cy="12" r="1.5" fill="#fff"/><circle cx="160" cy="20" r="1.5" fill="#fff"/><rect x="40" y="30" width="3" height="52" fill="#b08a50"/><polygon points="52,40 56,50 66,50 58,56 61,66 52,60 43,66 46,56 38,50 48,50" fill="#ff9a3a"/><rect x="140" y="34" width="3" height="48" fill="#b08a50"/><polygon points="152,44 156,54 166,54 158,60 161,70 152,64 143,70 146,60 138,54 148,54" fill="#ff5a7a"/><ellipse cx="90" cy="92" rx="6" ry="2.5" fill="#b8582e"/><circle cx="90" cy="88" r="2.5" fill="#ffcf5a"/><ellipse cx="115" cy="98" rx="6" ry="2.5" fill="#b8582e"/><circle cx="115" cy="94" r="2.5" fill="#ffcf5a"/></svg>`,
     5: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="86" y="18" width="28" height="92" fill="#2a2530"/><rect x="82" y="14" width="36" height="8" fill="#f2c45a"/><circle cx="100" cy="8" r="5" fill="#ffcf86"/><rect x="20" y="60" width="34" height="50" fill="#3a3440"/><rect x="146" y="50" width="34" height="60" fill="#3a3440"/><rect x="0" y="104" width="200" height="6" fill="#ff5a1a"/></svg>`,
   };
   return arts[id] || '';

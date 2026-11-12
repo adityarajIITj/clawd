@@ -1,0 +1,224 @@
+# ============================================================================
+#  MARATHI MANUS · WORLD 2 — KONKAN COAST
+#  Red laterite sea-stacks, palm-fringed beaches and fishing boats at sunset.
+# ============================================================================
+[level]
+id = 7
+campaign = "manus"
+name = "Konkan Coast"
+subtitle = "Salt air, coconut palms and a long golden evening"
+story = "Down the ghats the road ends at the sea. The Konkan sun sinks slowly behind the fishing boats, palms sway over red laterite cliffs, and the beach lizards are out sunning themselves for one last warm hour."
+music = "konkan"
+seed = 7707
+spawn = [0, 3.5, 0]
+goal = [27, 5, 103]
+parTime = 120
+
+[theme]
+skyTop = "#3d6fb8"
+skyHorizon = "#ffc48a"
+skyBottom = "#ffe0b8"
+sunColor = "#ffd0a0"
+sunDir = [0.6, 0.22, 0.75]
+sunIntensity = 2.2
+ambSky = "#a8b8e0"
+ambGround = "#d89870"
+fogColor = "#f8d4b0"
+fogDensity = 0.006
+floor = "water"
+floorY = -4
+floorColor = "#2aa0b0"
+floorColor2 = "#145870"
+clouds = 0.5
+stars = 0
+bloom = 0.55
+exposure = 1.0
+saturation = 1.06
+contrast = 1.03
+particles = "mote"
+particleColor = "#fff0c8"
+accent = "#e8843a"
+wind = [0.8, 0.3]
+
+[[island]]
+pos = [0, 3, 0]
+radius = 8
+shape = "pillar"
+style = "beach"
+decor = "konkan"
+
+[[island]]
+pos = [0, 4, 32]
+radius = 7
+shape = "pillar"
+style = "beach"
+decor = "konkan"
+density = 0.7
+
+[[island]]
+pos = [-8, 6, 26]
+radius = 2
+shape = "pillar"
+style = "laterite"
+
+[[island]]
+pos = [27, 8, 48]
+radius = 6
+shape = "pillar"
+style = "laterite"
+decor = "konkan"
+density = 0.6
+
+[[island]]
+pos = [27, 4, 66]
+radius = 9
+shape = "pillar"
+style = "beach"
+decor = "konkan"
+density = 0.7
+
+[[island]]
+pos = [27, 5, 100]
+radius = 7
+shape = "pillar"
+style = "beach"
+decor = "konkan"
+density = 0.6
+
+# distant headlands
+[[island]]
+pos = [-45, 16, 70]
+radius = 16
+shape = "pillar"
+style = "laterite"
+decor = "konkan"
+density = 0.35
+
+[[island]]
+pos = [80, 12, 40]
+radius = 14
+shape = "pillar"
+style = "laterite"
+decor = "konkan"
+density = 0.35
+
+[[path]]
+from = [0, 2.6, 12]
+to = [0, 2.6, 22]
+count = 3
+radius = 1.6
+style = "laterite"
+move = { type = "line", axis = [1, 0, 0], amp = 1.5, speed = 0.7 }
+alternate = true
+
+[[path]]
+from = [9, 5, 38]
+to = [17, 7, 44]
+count = 3
+radius = 1.5
+style = "laterite"
+
+# the pier
+[[path]]
+from = [27, 4.2, 77]
+to = [27, 4.6, 89]
+count = 4
+shape = "block"
+size = [3, 0.5, 4.2]
+style = "wood"
+sparks = false
+
+[[bouncer]]
+pos = [33, 4, 70]
+power = 24
+
+[[disc]]
+pos = [38, 12, 74]
+radius = 1.8
+style = "laterite"
+
+[[sparks]]
+type = "ring"
+center = [0, 4.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 5.2, 32]
+radius = 4
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [27, 9.2, 48]
+radius = 3.5
+count = 6
+
+[[sparks]]
+type = "arc"
+from = [27, 9.5, 55]
+to = [27, 5.5, 60]
+height = 1.5
+count = 4
+
+[[sparks]]
+type = "line"
+from = [27, 5.4, 77]
+to = [27, 5.8, 91]
+count = 7
+
+[[token]]
+pos = [38, 12.8, 74]
+
+[[token]]
+pos = [-8, 6.8, 26]
+
+[[token]]
+pos = [30, 8.8, 51]
+
+[[checkpoint]]
+pos = [3, 4, 35]
+
+[[checkpoint]]
+pos = [24, 4, 63]
+
+[[enemy]]
+type = "glitchling"
+a = [-3, 4, 30]
+b = [3, 4, 30]
+speed = 1.5
+
+[[hint]]
+pos = [0, 3, 0]
+radius = 5
+text = "Welcome to the Konkan. Listen to the waves for a while"
+
+[[hint]]
+pos = [27, 4, 72]
+radius = 3
+text = "A walk along the pier to finish the day"
+
+[[decor]]
+mesh = "boat"
+pos = [12, -4.2, 20]
+rot = 0.5
+scale = 1.4
+
+[[decor]]
+mesh = "boat"
+pos = [-14, -4.2, 50]
+rot = 1.2
+scale = 1.6
+
+[[decor]]
+mesh = "boat"
+pos = [40, -4.2, 90]
+rot = -0.6
+scale = 1.5
+
+[[decor]]
+mesh = "boat"
+pos = [12, -4.2, 82]
+rot = 2.0
+scale = 1.3
