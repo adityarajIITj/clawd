@@ -17,6 +17,8 @@ again: `python tools/serve.py`.
 **On a phone:** run `python tools/serve.py --lan` and open the printed address on a phone on the same
 Wi-Fi (Windows may ask to allow Python through the firewall). Hold the phone sideways.
 
+**Hosting:** the repo deploys to Vercel as-is — `vercel.json` serves the prebuilt `dist/` folder with no build step. After changing anything, run `python build.py`, commit and push.
+
 **Requirements:** Python 3.11+ with numpy, clang++ with wasm-ld (MSYS2 `clang64` or LLVM), and Rust
 with the `wasm32-unknown-unknown` target.
 
