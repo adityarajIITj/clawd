@@ -7,4 +7,6 @@ __pycache__/
 audio-local/
 dist/audio/custom/
 *.mp3
+!assets/music/*.mp3
+!dist/audio/*.mp3
 music_source/

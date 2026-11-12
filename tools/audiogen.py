@@ -472,17 +472,7 @@ TRACKS = [
           bars=12, density=0.45, seed=41, reverb_s=4.0, reverb_mix=0.5, lead_oct=12),
     Track("citadel", 124, 60, "minor", [0, 5, 2, 6], lead="brass", arp="pluck", drums="drive",
           bars=16, density=0.7, seed=51, extra={"bass_pattern": [0, 0.75, 1.5, 2.5, 3.0], "arp_step": 0.25}),
-    # ---- Marathi Manus campaign: original folk-inspired, deliberately soothing ----
-    Track("manus", 92, 62, "bhupali", [0, 0, 3, 4, 0, 0, 4, 3], lead="bansuri", arp="santoor", drums="dholki",
-          bars=16, density=0.6, seed=61, bass=None, extra={"pad_inst": "harmonium", "drone": True, "arp_step": 0.5}),
-    Track("sahyadri", 76, 60, "megh", [0, 0, 3, 2], lead="bansuri", arp="santoor", drums="dholki_soft",
-          bars=16, density=0.5, seed=71, bass=None, reverb_s=3.4, reverb_mix=0.42, pad=False,
-          extra={"drone": True, "arp_step": 1.0}),
-    Track("konkan", 84, 65, "bhupali", [0, 3, 0, 4], lead="bansuri", arp="santoor", drums="dadra",
-          bars=16, density=0.55, seed=81, bass="bass", extra={"pad_inst": "harmonium", "arp_step": 0.5, "bass_pattern": [0, 2.0]}),
-    Track("kandil", 70, 64, "yaman", [0, 1, 4, 0], lead="bell", arp="santoor", drums="dholki_soft",
-          bars=12, density=0.45, seed=91, bass=None, reverb_s=4.0, reverb_mix=0.5,
-          extra={"drone": True, "pad_inst": "harmonium", "arp_step": 1.0}),
+    # Marathi Manus music is the author's own recording (assets/music/*.mp3), not synthesized.
 ]
 
 

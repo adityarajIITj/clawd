@@ -359,9 +359,16 @@ uniform vec3 u_colA;
 uniform vec3 u_colB;
 uniform float u_param;
 uniform float u_alpha;
+uniform sampler2D u_tex;
 out vec4 o_col;
 void main(){
   vec2 uv = v_uv;
+  if (u_mode == 5) {           // photo decal (e.g. a face), lightly lit
+    vec4 t = texture(u_tex, vec2(uv.x, 1.0 - uv.y));
+    vec3 col = pow(t.rgb, vec3(2.2)) * u_param * mix(vec3(1.0), u_colA, 0.35);
+    o_col = vec4(applyFog(col, v_wpos), t.a * u_alpha);
+    return;
+  }
   vec4 c = vec4(0.0);
   if (u_mode == 0) {           // waterfall
     float edge = smoothstep(0.0, 0.12, uv.x) * smoothstep(1.0, 0.88, uv.x);

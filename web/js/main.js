@@ -85,10 +85,9 @@ class Game {
       };
       this.players = { clawd: new Clawd(this.shared.clawd), manus: new Manus(this.shared.manus) };
       this.player = this.players[this.character];
+      this.players.manus.faces = { neutral: r.loadTexture('img/manus_face.png'), tongue: r.loadTexture('img/manus_face_tongue.png') };
       this.ui.setLoading(0.5, 'Composing the soundtrack…');
       await this.audio.init((p) => this.ui.setLoading(0.5 + p * 0.45, 'Tuning the sound effects…'));
-      await this.audio.loadCustom();
-      this.audio.setUseCustom(this.character === 'manus');
       this.audio.loadTrack(this.titleTrack());
       this.ui.setLoading(1, 'Ready');
       this.loadWorld(this.homeWorld());
@@ -107,6 +106,7 @@ class Game {
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+    try { indexedDB.deleteDatabase('clawd-audio'); } catch (_) { /* old song-upload storage */ }
     addEventListener('pointerdown', () => this.audio.resume(), { once: true });
     addEventListener('keydown', () => this.audio.resume(), { once: true });
   }
@@ -133,6 +133,11 @@ class Game {
     this.combo = 0; this.comboT = 0;
     this.heartSparks = 0;
     this.renderer.post = { ...this.renderer.post, ...this.world.post, fade: 0, hurt: 0 };
+    // photo face brightness follows the world's light so it sits in the scene
+    const env = this.world.env;
+    const lum = (c) => c[0] * 0.3 + c[1] * 0.55 + c[2] * 0.15;
+    this.players.manus.faceLight = Math.min(1.6, Math.max(0.55, 0.45 + lum(env.sunColor) * env.sunI * 0.3 + lum(env.ambSky) * 0.5));
+    this.players.manus.faceTint = env.sunColor.map((x) => Math.min(1.2, x * 1.1));
     this.ui.resetHUD();
   }
 
@@ -151,7 +156,6 @@ class Game {
     this.character = c;
     localStorage.setItem('clawd.character', c);
     this.player = this.players[c];
-    this.audio.setUseCustom(c === 'manus');
     this.ui.setCollectibleIcons(c);
     this.levelId = 0;
     this.toTitle();
@@ -303,8 +307,6 @@ class Game {
       case 'play': this.showSelect(); break;
       case 'characters': this.showCharacters(); break;
       case 'pick-char': this.setCharacter(data.id); break;
-      case 'pick-song': document.getElementById('songFile')?.click(); break;
-      case 'clear-song': this.audio.clearCustom().then(() => this.showSettings()); break;
       case 'select': this.audio.duck(1); this.showSelect(); if (this.levelId) this.ui.showHUD(false); break;
       case 'title': this.toTitle(); break;
       case 'world': this.startWorld(+data.id); break;
@@ -340,21 +342,12 @@ class Game {
           ${slider('sens', 'Camera sensitivity', s.sens, 0.3, 2.5, 0.1)}
           <label class="set"><span>Graphics quality</span>
             <select data-key="quality">${['low', 'medium', 'high'].map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select></label>
-          <div class="set song"><span>Marathi Manus music<small>${this.audio.custom ? `Your song: ${escapeHtml(this.audio.custom.name)}` : 'Original folk soundtrack · or pick your own song (stays on this device)'}</small></span>
-            <span class="song-btns"><button data-act="pick-song" class="mini">${this.audio.custom ? 'Change' : 'Choose file'}</button>${this.audio.custom ? '<button data-act="clear-song" class="mini ghost-mini">Remove</button>' : ''}</span>
-            <input type="file" id="songFile" accept="audio/*" hidden></div>
           <label class="set"><span>Invert camera Y</span><input type="checkbox" data-key="invertY" ${s.invertY ? 'checked' : ''}></label>
           <label class="set"><span>Show FPS</span><input type="checkbox" data-key="fps" ${s.fps ? 'checked' : ''}></label>
         </div>
         <div class="row"><button data-act="settings-back">Done</button></div>
       </div>`, this.prevState === 'paused' ? 'dim' : '');
     if (this.prevState === 'paused') this.state = 'paused';
-    const f = document.getElementById('songFile');
-    if (f) f.addEventListener('change', async () => {
-      if (!f.files[0]) return;
-      try { await this.audio.setCustom(f.files[0]); } catch (e) { alert('That file could not be played. Try an MP3, M4A, OGG or WAV.'); }
-      this.showSettings();
-    });
   }
 
   setSetting(key, value) {
@@ -424,7 +417,7 @@ class Game {
   showManusEnding() {
     this.state = 'ending';
     this.ui.showHUD(false);
-    this.audio.playMusic('manus');
+    this.audio.playMusic('ending', 1.0);
     const ids = [6, 7, 8];
     const total = ids.reduce((a, id) => a + ((this.save.levels[id] || {}).tokens || []).filter(Boolean).length, 0);
     this.ui.show('ending', `

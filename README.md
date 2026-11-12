@@ -56,11 +56,10 @@ a phone that's always out. Leave him idle and he fixes his bun, then takes a sel
   6. **Sahyadri Monsoon**: misty ghats in the rain, old fort walls and waterfalls.
   7. **Konkan Coast**: laterite sea stacks, palms, fishing boats and a pier at sunset.
   8. **Kandil Lake**: a festival night with akash kandils, floating diyas, lotus leaves and fireflies.
-- The music is original and folk-inspired: bansuri, santoor, harmonium, tanpura drone and dholki,
-  written in Bhupali, Megh and Yaman–style scales.
-- **Settings → Marathi Manus music → Choose file** lets you play your own song while he's
-  selected. The file stays in your browser (IndexedDB) and is never uploaded. Commercial songs are
-  copyrighted, so don't add them to this repo or the public site.
+- His face is a photo of the real Marathi Manus, mapped onto a curved plate on the low-poly head. It
+  switches to a tongue-out photo while he dances or takes a selfie.
+- His soundtrack is the author's own track, cut into bar-aligned loops (`assets/music/`): one each
+  for the title, the three worlds, and a one-shot ending.
 
 ## Architecture
 

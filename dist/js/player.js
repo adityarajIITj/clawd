@@ -159,26 +159,26 @@ export class Manus extends Clawd {
 
     put(P.torso, m4.trs([0, 0.02 + breathe, 0]), { outline: 1.0 });
     const headTilt = selfie ? 0.18 : bunFix ? -0.12 : 0;
-    const headYaw = selfie ? -0.35 : 0;
+    const headYaw = selfie ? -0.12 : 0;
     const head = m4.trs([0, 0.55 + breathe, 0.01], headYaw, headTilt, selfie ? -0.12 : 0);
     put(P.head, head, { outline: 1.1 });
-    for (const s of [-1, 1]) put(P.eye, m4.mul(head, m4.trs([s * 0.095, 0.03, 0.245], 0, 0, 0, [1, this.blink, 1])), { spec: 0.6, rim: 0 });
-    if (this.dance || selfie) {
-      put(P.tongue, m4.mul(head, m4.trs([0, -0.165, 0.255], 0, 0.4, 0)), { rim: 0 });
-    } else {
-      put(P.mouth, m4.mul(head, m4.trs([0, -0.165, 0.245])), { rim: 0 });
+    // photo face: neutral normally, tongue-out while dancing or taking a selfie
+    if (this.faces) {
+      const fm = m4.mul(root, head);
+      r.drawFx({ mesh: P.facePlate, model: fm, mode: 5, tex: (this.dance || selfie) ? this.faces.tongue : this.faces.neutral,
+        param: this.faceLight ?? 1.2, colA: this.faceTint || [1, 1, 1], alpha: 1, depth: -1, flash });
     }
 
     // arms (pivot at the shoulder)
     for (const s of [-1, 1]) {
       let pitch = this.grounded ? -Math.sin(this.walk + (s > 0 ? 0 : Math.PI)) * 0.8 * run : -0.4;
-      let roll = -s * (0.12 + this.armLift * 0.9);
+      let roll = s * 0.1 - s * this.armLift * 0.9;
       let yaw = 0;
       if (this.pounding) { pitch = -2.6; roll = -s * 0.3; }
       if (this.dance) { pitch = -2.4 + Math.sin(t * 9 + s) * 0.5; roll = -s * (0.5 + Math.sin(t * 7 + s) * 0.3); }
       if (s < 0 && bunFix) { pitch = -2.7; roll = 0.5 + Math.sin(t * 10) * 0.12; }
       if (s > 0 && selfie) { pitch = -1.7; roll = 0.35; yaw = -0.4; }
-      const sh = m4.trs([s * 0.32, 0.2 + breathe, 0], yaw, pitch, roll);
+      const sh = m4.trs([s * 0.355, 0.19 + breathe, 0], yaw, pitch, roll);
       put(P.arm, sh, { outline: 0.9 });
       if (s > 0 && (selfie || (!this.dance && this.grounded && hs < 0.3))) {
         put(P.phone, m4.mul(sh, m4.trs([0, -0.44, 0.05], 0, selfie ? -0.2 : 1.3, 0)), { spec: 0.9, rim: 0.2 });

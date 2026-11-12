@@ -177,6 +177,25 @@ export class Renderer {
     inst.instances = count;
   }
 
+  loadTexture(url) {
+    const gl = this.gl;
+    const tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+    const img = new Image();
+    img.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+      gl.generateMipmap(gl.TEXTURE_2D);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    };
+    img.src = url;
+    return tex;
+  }
+
   deleteMesh(m) {
     const gl = this.gl;
     if (!m) return;
@@ -415,6 +434,12 @@ export class Renderer {
     for (const it of this.fxQueue) {
       if (it.additive) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      if (it.tex) {
+        gl.activeTexture(gl.TEXTURE2);
+        gl.bindTexture(gl.TEXTURE_2D, it.tex);
+        fxp.i1('u_tex', 2);
+        gl.activeTexture(gl.TEXTURE0);
+      }
       fxp.m4('u_model', it.model).i1('u_mode', it.mode).f3('u_colA', it.colA || [1, 1, 1]).f3('u_colB', it.colB || [1, 1, 1])
         .f1('u_param', it.param ?? 1).f1('u_alpha', it.alpha ?? 1);
       gl.bindVertexArray(it.mesh.vao);

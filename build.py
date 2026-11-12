@@ -90,6 +90,19 @@ def build_audio(force: bool) -> None:
     run([sys.executable, str(src), str(out)])
 
 
+def copy_music() -> None:
+    step("Marathi Manus music  ->  dist/audio (author's own MP3s)")
+    out = DIST / "audio"
+    out.mkdir(parents=True, exist_ok=True)
+    for stale in ("manus", "sahyadri", "konkan", "kandil"):
+        (out / f"music_{stale}.wav").unlink(missing_ok=True)
+    n = 0
+    for f in sorted((ROOT / "assets" / "music").glob("*.mp3")):
+        shutil.copy2(f, out / f.name)
+        n += 1
+    print(f"  ✓ {n} tracks")
+
+
 def copy_web() -> None:
     step("Web runtime  ->  dist/")
     for item in (ROOT / "web").iterdir():
@@ -111,6 +124,7 @@ def main() -> None:
     build_rust()
     build_levels()
     build_audio("--audio" in args)
+    copy_music()
     copy_web()
     print(f"\n\033[38;5;173m✷ Build complete in {time.time() - t0:.1f}s\033[0m  ->  {DIST}")
     if "--serve" in args:

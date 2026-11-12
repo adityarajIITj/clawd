@@ -10,17 +10,13 @@ const mulc = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
 //  MARATHI MANUS — chibi proportions; parts are positioned by the animator
 // ===========================================================================
 export function buildManus(r) {
-  const skin = hex('#b47a56'), skinD = hex('#9a6444'), hair = hex('#17110f'), tee = hex('#e6e3dc'),
+  const skin = hex('#94664c'), skinD = hex('#7e543c'), hair = hex('#17110f'), tee = hex('#e6e3dc'),
     jeans = hex('#2f3846'), shoe = hex('#f1efe9'), sole = hex('#3a3434'), band = hex('#222226'), logo = hex('#d8484a');
   const P = {};
   const head = new MB();
   head.sphere(T(0, 0, 0, 0, 0, 0, [1, 1.08, 0.98]), 0.27, 18, skin);
-  head.sphere(T(0, -0.155, 0.06, 0, 0, 0, [0.9, 0.48, 0.76]), 0.25, 14, hex('#6e4c38'));      // stubble jaw
-  head.sphere(T(0, -0.06, 0.255, 0, 0, 0, [1, 0.8, 0.9]), 0.045, 8, skinD);                  // nose
-  head.roundedBox(T(0, -0.115, 0.245), [0.13, 0.025, 0.03], 0.01, hex('#241814'), 2);          // moustache
   for (const s of [-1, 1]) {
     head.sphere(T(s * 0.27, -0.01, 0, 0, 0, 0, [0.5, 1, 0.8]), 0.06, 8, skinD);              // ears
-    head.roundedBox(T(s * 0.095, 0.085, 0.235, 0, 0, s * -0.12), [0.1, 0.022, 0.03], 0.01, hair, 2); // brows
   }
   // slicked-back hair cap (face left open) + man bun with tie
   head.sphere(T(0, 0.045, -0.02, 0, -0.18, 0, [1.06, 0.98, 1.06]), 0.27, 18, hair, false,
@@ -28,6 +24,21 @@ export function buildManus(r) {
   head.sphere(T(0, 0.33, -0.06), 0.09, 12, hair);
   head.cylinder(T(0, 0.25, -0.05), 0.055, 0.05, 0.05, 10, hex('#3a3236'));
   P.head = head.build(r);
+  // curved plate that carries the photo face (uv packed into the colour channel)
+  const plate = new MB();
+  const W = 0.47, H = 0.53, N = 10;
+  const pt = (u, v) => {
+    const x = (u - 0.5) * W, y = (v - 0.5) * H;
+    return [x, y - 0.03, 0.3 - x * x * 1.1 - y * y * 0.4];
+  };
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) {
+      const u0 = i / N, u1 = (i + 1) / N, v0 = j / N, v1 = (j + 1) / N;
+      const q = [[u0, v0], [u1, v0], [u1, v1], [u0, v0], [u1, v1], [u0, v1]];
+      for (const [u, v] of q) plate.vert(pt(u, v), [0, 0, 1], [u, v, 0]);
+    }
+  }
+  P.facePlate = plate.build(r);
   const eye = new MB();
   eye.sphere(T(0, 0, 0, 0, 0, 0, [1, 1.25, 0.5]), 0.032, 8, hex('#120c0a'));
   eye.sphere(T(0.01, 0.012, 0.012), 0.009, 6, [1, 1, 1]);
