@@ -16,6 +16,7 @@ goal = [26, 4, 107]
 parTime = 120
 
 [theme]
+ambience = "waves"
 skyTop = "#4a74c8"
 skyHorizon = "#ffc890"
 skyBottom = "#ffe4c0"
@@ -296,3 +297,9 @@ mesh = "boat"
 pos = [42, -4.2, 95]
 rot = -0.6
 scale = 1.4
+
+[[enemy]]
+type = "shellback"
+a = [23, 4, 101]
+b = [29, 4, 101]
+speed = 1.3

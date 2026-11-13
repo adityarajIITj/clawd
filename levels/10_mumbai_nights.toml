@@ -16,6 +16,7 @@ goal = [40, 22, 108]
 parTime = 130
 
 [theme]
+ambience = "city"
 skyTop = "#0a1030"
 skyHorizon = "#6a445e"
 skyBottom = "#1a1838"
@@ -330,3 +331,14 @@ mesh = "lamp"
 pos = [34.5, 22, 111.5]
 rot = 0
 scale = 1.0
+
+[[enemy]]
+type = "spitpod"
+pos = [32, 15, 64]
+range = 12
+rate = 2.8
+
+[[enemy]]
+type = "rambot"
+pos = [2, 12, 56]
+range = 6

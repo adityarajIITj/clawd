@@ -130,7 +130,7 @@ to = [26, 7.5, 67]
 count = 3
 shape = "block"
 size = [3, 0.8, 3]
-style = "ice"
+style = "glacier"
 move = { type = "line", axis = [1, 0, 0], amp = 2.5, speed = 1.0 }
 alternate = true
 

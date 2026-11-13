@@ -264,3 +264,9 @@ contains = "sparks"
 pos = [21, 18, 80]
 contains = "heart"
 
+
+[[enemy]]
+type = "spitpod"
+pos = [21, 18, 84]
+range = 12
+rate = 2.8

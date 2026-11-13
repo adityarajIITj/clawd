@@ -16,6 +16,7 @@ goal = [0, 9, 93]
 parTime = 120
 
 [theme]
+ambience = "night"
 skyTop = "#0e1430"
 skyHorizon = "#4a3a6a"
 skyBottom = "#1a1a3a"

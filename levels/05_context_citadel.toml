@@ -11,7 +11,7 @@ music = "konkan"
 quests = ["tokens", "stomp_all", "par"]
 seed = 5505
 spawn = [0, 2.5, 0]
-goal = [30, 34.5, 90]
+goal = [30, 34.5, 96.5]
 parTime = 200
 
 [theme]
@@ -82,7 +82,7 @@ density = 0.5
 # the summit tower
 [[island]]
 pos = [30, 34.5, 90]
-radius = 5.5
+radius = 8.5
 shape = "pillar"
 style = "gold"
 
@@ -146,7 +146,7 @@ style = "gold"
 
 [[spiral]]
 center = [30, 90]
-radius = 9
+radius = 11.5
 from_y = 17.5
 to_y = 33
 count = 13
@@ -202,9 +202,9 @@ count = 8
 
 [[sparks]]
 type = "ring"
-center = [30, 36, 90]
-radius = 3.5
-count = 10
+center = [30, 35.7, 90]
+radius = 6.2
+count = 12
 
 [[token]]
 pos = [-10, 5.8, 38]
@@ -272,11 +272,6 @@ pos = [30, 26, 90]
 range = 10
 speed = 3.4
 
-[[enemy]]
-type = "wisp"
-pos = [30, 32, 90]
-range = 10
-speed = 3.4
 
 [[hint]]
 pos = [0, 2, 5]
@@ -304,3 +299,32 @@ contains = "heart"
 pos = [51, 14, 42]
 contains = "sparks"
 
+
+[[enemy]]
+type = "shellback"
+a = [-3, 3, 35]
+b = [3, 3, 35]
+speed = 1.5
+
+[[enemy]]
+type = "spitpod"
+pos = [50, 14, 46]
+range = 12
+rate = 2.6
+
+[[enemy]]
+type = "rambot"
+pos = [46, 16, 78]
+range = 7
+
+[[boss]]
+type = "glitchking"
+name = "The Glitch King"
+pos = [30, 34.5, 90]
+hp = 3
+arena = 7.8
+
+[[hint]]
+pos = [30, 34.5, 82]
+radius = 2.5
+text = "The Glitch King guards the Great Window. The portal won't open while he stands"

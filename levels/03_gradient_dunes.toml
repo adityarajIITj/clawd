@@ -283,3 +283,43 @@ contains = "sparks"
 pos = [47, 8, 68]
 contains = "heart"
 
+
+[[enemy]]
+type = "rambot"
+pos = [42, 15, 47]
+range = 7
+
+[[enemy]]
+type = "spitpod"
+pos = [40, 18, 101]
+range = 13
+rate = 2.6
+
+[[wind]]
+pos = [15, 6, 35]
+radius = 9
+dir = [0, 1]
+strength = 3.2
+period = 4.5
+phase = 0
+
+[[wind]]
+pos = [44, 12, 60]
+radius = 6
+dir = [-1, 0]
+strength = 3.0
+period = 4.0
+phase = 1.5
+
+[[wind]]
+pos = [44, 13, 86]
+radius = 6
+dir = [1, 0]
+strength = 3.0
+period = 5.0
+phase = 0.8
+
+[[hint]]
+pos = [5, 5.5, 35]
+radius = 3
+text = "Feel that? Desert gusts push you around. Watch the sand and jump between them"

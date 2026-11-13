@@ -69,7 +69,7 @@ density = 0.7
 [[island]]
 pos = [33, 6, 60]
 radius = 6
-style = "ice"
+style = "glacier"
 decor = "frost"
 density = 0.6
 
@@ -123,7 +123,7 @@ to = [23, 5, 58]
 count = 3
 shape = "block"
 size = [3, 0.8, 3]
-style = "ice"
+style = "glacier"
 move = { type = "line", axis = [0, 0, 1], amp = 3, speed = 1.0 }
 alternate = true
 
@@ -250,3 +250,19 @@ text = "A wide gap! Double jump, then <b>dash</b> in mid-air to make it across"
 pos = [0, 0, 0]
 radius = 4
 text = "Welcome to the Peaks. You can dash once per jump — it resets when you land"
+
+[[enemy]]
+type = "rambot"
+pos = [2, 3, 56]
+range = 8
+
+[[enemy]]
+type = "shellback"
+a = [-3, 2, 34]
+b = [3, 2, 34]
+speed = 1.4
+
+[[hint]]
+pos = [9, 4, 58]
+radius = 3
+text = "Glacier ice is slippery. Ease off early — you'll slide!"

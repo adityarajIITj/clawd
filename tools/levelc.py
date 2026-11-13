@@ -63,6 +63,7 @@ STYLES: dict[str, dict[str, list[float]]] = {
     "slate":    {"top": hexc("9aa0a8"), "side": hexc("6a6e78"), "rock": hexc("4a4e58")},
     "sandbeach":{"top": hexc("f2dcae"), "side": hexc("d8a878"), "rock": hexc("a87048")},
     "khondalite":{"top": hexc("d8a070"), "side": hexc("b87848"), "rock": hexc("8a5434")},
+    "glacier":  {"top": hexc("dff2ff"), "side": hexc("9fd0f0"), "rock": hexc("6aa0d0")},
     "ice":      {"top": hexc("e6eefa"), "side": hexc("bcd8f0"), "rock": hexc("7fa6d0")},
     "taxi":     {"top": hexc("f2c230"), "side": hexc("1c1c20"), "rock": hexc("101014")},
     "rooftop":  {"top": hexc("8a8f9a"), "side": hexc("4a4f60"), "rock": hexc("2a2e3c")},
@@ -144,6 +145,8 @@ class Compiler:
 
     def add_solid(self, shape: str, pos, size, style: str, move=None, kind="solid", power=0.0, visual=None, color=None):
         st = self.style(style)
+        if style == "glacier" and kind == "solid":
+            kind = "ice"  # slippery surface
         solid = {
             "shape": shape,
             "pos": [round(v, 3) for v in pos],
@@ -433,6 +436,8 @@ class Compiler:
             self.keepouts.append((c["pos"][0], c["pos"][2], 2.0))
         for e in S.get("bouncer", []):
             self.keepouts.append((e["pos"][0], e["pos"][2], 2.0))
+        for e in S.get("boss", []):
+            self.keepouts.append((e["pos"][0], e["pos"][2], e.get("arena", 7.0)))
         for e in S.get("enemy", []):
             if "a" in e:
                 self.keepouts.append((e["a"][0], e["a"][2], 1.5))
@@ -501,6 +506,8 @@ class Compiler:
             "checkpoints": [c["pos"] for c in S.get("checkpoint", [])],
             "enemies": S.get("enemy", []),
             "lasers": S.get("laser", []),
+            "winds": S.get("wind", []),
+            "boss": (S.get("boss") or [None])[0],
             "hints": S.get("hint", []),
             "decor": self.decor,
             "grass": self.grass,

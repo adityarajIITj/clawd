@@ -83,7 +83,7 @@ def build_levels() -> None:
 def build_audio(force: bool) -> None:
     step("Sound effects  ->  procedural synthesis")
     out = DIST / "audio"
-    marker = out / "sfx_quest.wav"
+    marker = out / "amb_city.wav"
     src = ROOT / "tools/audiogen.py"
     if not force and marker.exists() and marker.stat().st_mtime > src.stat().st_mtime:
         print("  ✓ up to date (use --audio to force)")

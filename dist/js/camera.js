@@ -95,6 +95,20 @@ export class Camera {
       const ty = p[1] + 1.0;
       this.target[1] = damp(this.target[1], ty, ctx.player.grounded ? 5 : (ty < this.target[1] - 1.5 ? 6 : 2.2), dt);
       const want = this.desired();
+      // keep walls and islands from getting between the camera and the player
+      if (ctx.raycast) {
+        const from = [this.target[0], this.target[1] + 0.2, this.target[2]];
+        const d = [want[0] - from[0], want[1] - from[1], want[2] - from[2]];
+        const len = Math.hypot(d[0], d[1], d[2]) || 1;
+        const hit = ctx.raycast(from, [d[0] / len, d[1] / len, d[2] / len], len);
+        const allowed = hit < len ? Math.max(1.2, hit - 0.45) : len;
+        this.clip = allowed < (this.clip ?? len) ? allowed : damp(this.clip ?? len, allowed, 2.5, dt);
+        if (this.clip < len - 0.01) {
+          const k = this.clip / len;
+          want[0] = from[0] + d[0] * k; want[1] = from[1] + d[1] * k; want[2] = from[2] + d[2] * k;
+          this.pos = [damp(this.pos[0], want[0], 30, dt), damp(this.pos[1], want[1], 30, dt), damp(this.pos[2], want[2], 30, dt)];
+        }
+      }
       this.pos = [damp(this.pos[0], want[0], 14, dt), damp(this.pos[1], want[1], 10, dt), damp(this.pos[2], want[2], 14, dt)];
       this.look = [...this.target];
     }

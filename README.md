@@ -69,6 +69,24 @@ Each world has Sparks to collect (every 20 restores a heart), 3 hidden golden To
 checkpoints, crates to smash with a ground pound (some hold a heart), and an S/A/B/C rank. A world
 opens when you finish the one before it in its set. Your progress is saved in the browser.
 
+## Enemies and the boss
+
+| Enemy | What it does | How to beat it |
+|---|---|---|
+| **Glitchling** | Paces back and forth | Stomp it |
+| **Hallucination Wisp** | Floats toward you when you're close | Stomp it |
+| **Rambot** | Spots you, paws the ground, then charges in a straight line and gets dizzy at walls and edges | Stomp it, ideally while it's dizzy |
+| **Spitpod** | A potted turret that turns to aim and lobs glowing orbs | Dodge the orbs, then stomp it |
+| **Shellback** | Armoured; a normal stomp just bounces off | Ground pound it |
+| **The Glitch King** (Context Citadel summit) | Hops at you and slams out shockwave rings; after three slams he gets dizzy | Jump the rings, then ground pound his head while he's dizzy, three times. The portal stays shut until he falls |
+
+## World mechanics and feel
+
+- **Glacier ice** (Frostbyte Peaks, Valley of Flowers) is slippery: you speed up slowly and slide when you let go.
+- **Wind gusts** (Gradient Dunes, plus a helpful tailwind in Spark Rush) push you in pulses; watch the sand to time your jumps.
+- **Ambient soundscapes**: wind, rain, waves, crickets, a city hum, a lava rumble or a space drone, depending on the world (adjustable in Settings → Sound).
+- The camera moves in front of walls and islands instead of passing through them, big hits briefly freeze the action, worlds fade in, and **Continue** on the home screen takes you back to where you left off.
+
 ## Quests
 
 Every world has three quests, chosen in its level file: collect everything, find all three Tokens,

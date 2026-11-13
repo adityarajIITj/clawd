@@ -252,3 +252,11 @@ text = "Bonus world! No enemies here — just beat the clock"
 pos = [0, 10, 57]
 radius = 2.5
 text = "The widest gap in the game. Run, double jump, then <b>dash</b>"
+
+[[wind]]
+pos = [0, 10.5, 64]
+radius = 6
+dir = [0, 1]
+strength = 2.6
+period = 3.0
+phase = 0

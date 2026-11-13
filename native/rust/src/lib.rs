@@ -96,6 +96,7 @@ struct Player {
     dash_t: f32,
     dash_cd: f32,
     air_dashed: bool,
+    push: [f32; 2],
 }
 
 static mut WORLD: World = World { bodies: [EMPTY; MAX_BODIES], count: 0 };
@@ -118,6 +119,7 @@ static mut PLAYER: Player = Player {
     dash_t: 0.0,
     dash_cd: 0.0,
     air_dashed: false,
+    push: [0.0; 2],
 };
 static mut STATE: [f32; 16] = [0.0; 16];
 
@@ -223,8 +225,106 @@ pub extern "C" fn player_reset(x: f32, y: f32, z: f32) {
         p.dash_t = 0.0;
         p.dash_cd = 0.0;
         p.air_dashed = false;
+        p.push = [0.0; 2];
         write_state();
     }
+}
+
+/// Wind / conveyor acceleration applied every step until changed.
+#[no_mangle]
+pub extern "C" fn player_set_push(x: f32, z: f32) {
+    unsafe {
+        PLAYER.push = [x, z];
+    }
+}
+
+/// Nearest hit along a ray against active bodies (slab test for boxes,
+/// capped vertical cylinders). Returns the distance, or `max` when clear.
+#[no_mangle]
+pub extern "C" fn world_raycast(ox: f32, oy: f32, oz: f32, dx: f32, dy: f32, dz: f32, max: f32, min_radius: f32) -> f32 {
+    unsafe {
+        let mut best = max;
+        for i in 0..WORLD.count {
+            let b = &WORLD.bodies[i];
+            if !b.active {
+                continue;
+            }
+            // thin posts (tree trunks, columns) can be skipped, e.g. by the camera
+            if b.shape == 1 && b.half[0] < min_radius {
+                continue;
+            }
+            let t = if b.shape == 0 { ray_box(b, [ox, oy, oz], [dx, dy, dz]) } else { ray_cyl(b, [ox, oy, oz], [dx, dy, dz]) };
+            if t >= 0.0 && t < best {
+                best = t;
+            }
+        }
+        best
+    }
+}
+
+fn ray_box(b: &Body, o: [f32; 3], d: [f32; 3]) -> f32 {
+    let mut t0 = 0.0f32;
+    let mut t1 = f32::MAX;
+    for k in 0..3 {
+        let lo = b.pos[k] - b.half[k];
+        let hi = b.pos[k] + b.half[k];
+        if d[k].abs() < 1e-8 {
+            if o[k] < lo || o[k] > hi {
+                return -1.0;
+            }
+        } else {
+            let mut a = (lo - o[k]) / d[k];
+            let mut c = (hi - o[k]) / d[k];
+            if a > c {
+                core::mem::swap(&mut a, &mut c);
+            }
+            t0 = t0.max(a);
+            t1 = t1.min(c);
+            if t0 > t1 {
+                return -1.0;
+            }
+        }
+    }
+    if t0 <= 0.0 { -1.0 } else { t0 } // origin inside: ignore (camera target is inside nothing)
+}
+
+fn ray_cyl(b: &Body, o: [f32; 3], d: [f32; 3]) -> f32 {
+    let r = b.half[0];
+    let y0 = b.pos[1] - b.half[1];
+    let y1 = b.pos[1] + b.half[1];
+    let ox = o[0] - b.pos[0];
+    let oz = o[2] - b.pos[2];
+    let mut best = -1.0f32;
+    // side wall
+    let a = d[0] * d[0] + d[2] * d[2];
+    if a > 1e-10 {
+        let bb = 2.0 * (ox * d[0] + oz * d[2]);
+        let c = ox * ox + oz * oz - r * r;
+        let disc = bb * bb - 4.0 * a * c;
+        if disc >= 0.0 {
+            let t = (-bb - disc.sqrt()) / (2.0 * a);
+            if t > 0.0 {
+                let y = o[1] + d[1] * t;
+                if y >= y0 && y <= y1 {
+                    best = t;
+                }
+            }
+        }
+    }
+    // caps
+    if d[1].abs() > 1e-8 {
+        for cap in [y0, y1] {
+            let t = (cap - o[1]) / d[1];
+            if t > 0.0 && (best < 0.0 || t < best) {
+                let x = ox + d[0] * t;
+                let z = oz + d[2] * t;
+                if x * x + z * z <= r * r {
+                    best = t;
+                }
+            }
+        }
+    }
+    best
 }
 
 #[no_mangle]
@@ -371,13 +471,17 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
         }
     }
 
+    // surface under the feet: kind 2 = glacier ice (slippery)
+    let on_ice = p.grounded && p.ground_id >= 0 && WORLD.bodies[p.ground_id as usize].kind == 2;
     if !p.pounding && !dashing {
-        let max = MAX_SPEED * p.speed_scale;
-        let (tx, tz) = (ix * max, iz * max);
-        let rate = if len > 0.05 {
-            if p.grounded { ACCEL_GROUND } else { ACCEL_AIR }
+        let max = MAX_SPEED * p.speed_scale * if on_ice { 1.12 } else { 1.0 };
+        // wind: the air itself moves at `push` units/s, so targets drift with it
+        let (tx, tz) = (ix * max + p.push[0], iz * max + p.push[1]);
+        let pushing = p.push[0] != 0.0 || p.push[1] != 0.0;
+        let rate = if len > 0.05 || pushing {
+            if p.grounded { if on_ice { ACCEL_GROUND * 0.3 } else { ACCEL_GROUND } } else { ACCEL_AIR }
         } else if p.grounded {
-            FRICTION
+            if on_ice { FRICTION * 0.07 } else { FRICTION }
         } else {
             AIR_DRAG
         };
@@ -389,6 +493,7 @@ unsafe fn step(dt: f32, mut ix: f32, mut iz: f32, jump_held: bool, jump_pressed:
             p.facing = ix.atan2(iz);
         }
     }
+
 
     // ---- jumping ---------------------------------------------------------------
     p.coyote = if p.grounded { COYOTE } else { p.coyote - dt };

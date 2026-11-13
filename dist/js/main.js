@@ -13,7 +13,8 @@ import { UI, fmtTime, starIcon } from './ui.js';
 import { QUESTS, BONUS_STARS, questList, countStars } from './quests.js';
 import { loadNative } from './wasm.js';
 import * as M from './meshes.js';
-import { v3, clamp } from './math.js';
+import { v3, clamp, m4 } from './math.js';
+import { buildRambot, buildSpitpod, buildShellback, buildCrown } from './meshes_foes.js';
 
 const STEP = 1 / 120;
 const QUALITY = {
@@ -97,6 +98,11 @@ class Game {
         monal: buildMonal(r),
         rasagola: buildRasagola(r),
         konark: buildKonarkWheel(r),
+        rambot: buildRambot(r),
+        spitpod: buildSpitpod(r),
+        shellback: buildShellback(r),
+        crown: buildCrown(r),
+        ring: new M.MB().torus(m4.ident(), 1, 0.07, 64, 6, [1, 0.6, 0.95]).build(r),
       };
       this.players = { clawd: new Clawd(this.shared.clawd), manus: new Manus(this.shared.manus), mahak: new Mahak(this.shared.mahak), lingraj: new Lingraj(this.shared.lingraj) };
       this.player = this.players[this.character];
@@ -157,9 +163,22 @@ class Game {
     this.players.manus.faceLight = Math.min(1.6, Math.max(0.55, 0.45 + lum(env.sunColor) * env.sunI * 0.3 + lum(env.ambSky) * 0.5));
     this.players.manus.faceTint = env.sunColor.map((x) => Math.min(1.2, x * 1.1));
     this.ui.resetHUD();
+    this.ui.hideBoss();
+    this.hitStop = 0;
+    this.seen = {};
+    this.audio.playAmbience(ambienceFor(data));
   }
 
   hero() { return HEROES[this.character]; }
+  // Where "Continue" goes: the last world if unfinished, else the next open, unfinished world.
+  continueTarget() {
+    const last = this.save.last;
+    if (last && this.levels[last] && !this.save.levels[last]?.done && !this.isLocked(last)) return last;
+    for (const set of this.setOrder()) {
+      for (const m of this.campaignList(set)) if (!this.isLocked(m.id) && !this.save.levels[m.id]?.done) return m.id;
+    }
+    return last && this.levels[last] ? last : null;
+  }
   homeWorld() { return this.campaignList(this.hero().home)[0]?.id || 1; }
   setOrder() {
     const all = ['clawd', 'manus', 'pahadi', 'odisha', 'bonus'].filter((c) => this.campaignList(c).length);
@@ -230,22 +249,6 @@ class Game {
       </div>`, 'select');
   }
 
-  showMultiplayer() {
-    this.state = 'select';
-    this.ui.show('multiplayer', `
-      <div class="panel wide mp-panel">
-        <div class="kicker">Coming in the next update</div>
-        <h2>Multiplayer</h2>
-        <p class="note center">Team up with friends in co-op worlds built for teamwork: hold switches for each other, stand on a teammate to reach high ledges, carry things together.</p>
-        <div class="mp-facts">
-          <div><b>Your gamer tag</b><span>${esc(this.profile.tag)}</span></div>
-          <div><b>Party size</b><span>2 to 4 players</span></div>
-          <div><b>Joining</b><span>Room code or link, no login</span></div>
-        </div>
-        <div class="row"><button data-act="profile">Edit gamer tag</button><button data-act="title" class="ghost">Back</button></div>
-      </div>`, '');
-  }
-
   toTitle() {
     this.state = 'title';
     if (this.levelId !== this.homeWorld()) this.loadWorld(this.homeWorld());
@@ -257,6 +260,7 @@ class Game {
     this.audio.playMusic('title');
     const done = this.manifest.filter((m) => this.save.levels[m.id]?.done).length;
     const h = this.hero();
+    const cont = this.continueTarget();
     this.ui.show('title', `
       <div class="title-wrap">
         <div class="logo">
@@ -268,7 +272,7 @@ class Game {
         <div class="home-menu">
           <div class="tiles">
             <button class="tile primary" data-act="play"><b>Play Solo</b><span>${done} / ${this.manifest.length} worlds · ${this.questStars()} ★</span></button>
-            <button class="tile mp" data-act="multiplayer"><b>Multiplayer</b><span>2–4 players · coming soon</span></button>
+            ${cont ? `<button class="tile cont" data-act="continue"><b>Continue</b><span>${this.levels[cont].name}</span></button>` : `<button class="tile cont" data-act="howto"><b>How to Play</b><span>Controls &amp; tips</span></button>`}
           </div>
           <div class="subrow">
             <button class="pill hero-pill" data-act="characters"><span class="mini-art">${HERO_ART[this.character]}</span><span>${h.name}</span></button>
@@ -336,6 +340,9 @@ class Game {
 
   startWorld(id) {
     this.loadWorld(id);
+    this.save.last = id;
+    localStorage.setItem('clawd.save', JSON.stringify(this.save));
+    this.fadeT = 0.7;
     const lv = this.levels[id];
     this.state = 'intro';
     this.ui.showHUD(false);
@@ -394,7 +401,7 @@ class Game {
     switch (act) {
       case 'play': this.showSelect(); break;
       case 'characters': this.showCharacters(); break;
-      case 'multiplayer': this.showMultiplayer(); break;
+      case 'continue': { const c = this.continueTarget(); if (c) this.startWorld(c); else this.showSelect(); break; }
       case 'map-tab': this.mapSet = data.set; this.showSelect(); break;
       case 'profile': this.settingsTab = 'profile'; this.showSettings(); break;
       case 'settings-tab': this.settingsTab = data.tab; this.resetArmed = false; this.showSettings(); break;
@@ -434,7 +441,7 @@ class Game {
     const qHint = { low: 'Fastest. Best for older phones.', medium: 'Balanced for most phones and laptops.', high: 'Sharpest image and softest shadows.' };
     let body = '';
     if (cur === 'sound') {
-      body = `${slider('master', 'Master volume', v.master)}${slider('music', 'Music', v.music)}${slider('sfx', 'Sound effects', v.sfx)}`;
+      body = `${slider('master', 'Master volume', v.master)}${slider('music', 'Music', v.music)}${slider('sfx', 'Sound effects', v.sfx)}${slider('amb', 'Ambience (wind, rain, waves)', v.amb ?? 0.6)}`;
     } else if (cur === 'graphics') {
       body = `<label class="set"><span>Quality<small>${qHint[s.quality] || ''}</small></span>
           <select data-key="quality">${['low', 'medium', 'high'].map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select></label>
@@ -491,7 +498,7 @@ class Game {
   }
 
   setSetting(key, value) {
-    if (['master', 'music', 'sfx'].includes(key)) { this.audio.vol[key] = +value; this.audio.applyVolumes(); return; }
+    if (['master', 'music', 'sfx', 'amb'].includes(key)) { this.audio.vol[key] = +value; this.audio.applyVolumes(); return; }
     if (key === 'sens') this.settings.sens = +value;
     if (key === 'invertY') this.settings.invertY = !!value;
     if (key === 'fps') this.settings.fps = !!value;
@@ -562,7 +569,7 @@ class Game {
   // ---------------------------------------------------------------------------
   // gameplay events
   // ---------------------------------------------------------------------------
-  hurt(from, zap) {
+  hurt(from, zap, hard) {
     if (this.invuln > 0 || this.state !== 'play') return;
     this.hearts--;
     this.heartsLost++;
@@ -573,7 +580,8 @@ class Game {
     this.audio.play(zap ? 'zap' : 'hurt');
     const p = this.player.pos;
     const d = v3.norm([p[0] - from[0], 0, p[2] - from[2]]);
-    this.native.physics.knock(d[0] * 9, 11, d[2] * 9);
+    const k = hard ? 14 : 9;
+    this.native.physics.knock(d[0] * k, hard ? 13 : 11, d[2] * k);
     this.native.fx.emit(this.native.fx.T.BURST, [p[0], p[1] + 0.6, p[2]], 18, [2.4, 0.6, 0.4], 5);
     if (this.hearts <= 0) setTimeout(() => this.gameOver(), 500);
   }
@@ -724,12 +732,13 @@ class Game {
     } else if (this.cam.mode === 'cine' || this.cam.mode === 'hold') {
       this.cam.update(this.cam.mode === 'hold' ? 0 : dt, { aspect });
     } else {
-      this.cam.update(dt, { player: this.player, input: this.state === 'play' ? inp : null, aspect });
+      this.cam.update(dt, { player: this.player, input: this.state === 'play' ? inp : null, aspect, raycast: (o, d, m) => this.native.physics.raycast(o, d, m, 0.75) });
     }
 
     // post fx easing
     const P = this.renderer.post;
     P.hurt = Math.max(0, P.hurt - dt * 2);
+    if (this.fadeT > 0 && this.state !== 'respawn') { this.fadeT -= dt; P.fade = Math.max(0, this.fadeT / 0.7); }
 
     this.render(dt);
 
@@ -743,7 +752,12 @@ class Game {
 
   updatePlay(dt, inp) {
     const phys = this.native.physics, EV = this.native.EV, fx = this.native.fx;
+    if (this.hitStop > 0) { this.hitStop -= dt; return; }   // a tiny freeze sells big hits
     this.levelTime += dt;
+    const wp = this.world.windPush;
+    phys.push(wp[0], wp[1]);
+    const bw = this.world.env.wind;
+    fx.wind(bw[0] * 1.5 + wp[0] * 0.9, bw[1] * 1.5 + wp[1] * 0.9);
     this.invuln = Math.max(0, this.invuln - dt);
     const [ix, iz] = this.cam.moveDir(inp.mx, inp.mz);
     this.acc = (this.acc || 0) + dt;
@@ -783,6 +797,7 @@ class Game {
       if (smashed) {
         this.audio.play('crate', { vol: 0.9 });
         phys.bounce(7);
+        this.hitStop = 0.06;
         if (smashed.contains === 'heart') {
           if (this.hearts < 3) { this.hearts++; this.ui.popup('+1 ♥', 'heart'); } else this.ui.popup('♥ already full', 'heart');
           this.audio.play('heart', { vol: 0.8 });
@@ -810,6 +825,7 @@ class Game {
     for (const e of out) {
       if (e.type === 'spark') {
         this.combo++; this.comboT = 1.4;
+        if (this.combo >= 5 && this.combo % 5 === 0) this.ui.popup(`×${this.combo} combo!`, 'combo');
         this.audio.play('spark', { vol: 0.55, rate: 1 + Math.min(this.combo, 12) * 0.045, vary: 0.01 });
         this.heartSparks++;
         if (this.heartSparks >= 20) {
@@ -827,8 +843,48 @@ class Game {
         this.audio.play('stomp', { vol: 0.8 });
         phys.bounce(this.player.pounding ? 9 : 13);
         this.player.sqV += 6;
+        this.hitStop = 0.05;
+        this.cam.shake = Math.max(this.cam.shake, 0.25);
       } else if (e.type === 'hurt') {
-        this.hurt(e.from, e.zap);
+        this.hurt(e.from, e.zap, e.hard);
+      } else if (e.type === 'clank') {
+        this.audio.play('zap', { vol: 0.45, rate: 1.6 });
+        phys.bounce(11);
+        this.cam.shake = Math.max(this.cam.shake, 0.2);
+        if (!this.seen.clank) { this.seen.clank = true; this.ui.hint(e.boss ? 'Only a <b>ground pound</b> hurts him — and only while he\'s dizzy' : 'Too tough to stomp! <b>Ground pound</b> it instead (SHIFT in mid-air)'); }
+      } else if (e.type === 'charge') {
+        this.audio.play('dash', { vol: 0.55, rate: 0.7 });
+      } else if (e.type === 'bonk') {
+        this.audio.play('land', { vol: 0.8, rate: 0.7 });
+        this.cam.shake = Math.max(this.cam.shake, 0.3);
+      } else if (e.type === 'spit') {
+        this.audio.play('pound', { vol: 0.3, rate: 1.7 });
+      } else if (e.type === 'wind') {
+        this.audio.play('dash', { vol: 0.35, rate: 0.5 });
+        if (!this.seen.wind) { this.seen.wind = true; this.ui.hint('Strong gusts here! Watch the sand and time your jumps between them'); }
+      } else if (e.type === 'bossstart') {
+        const B = this.world.boss;
+        this.audio.play('portal', { vol: 0.8, rate: 0.7 });
+        this.cam.shake = 0.6;
+        this.ui.showBanner(B.name, 'Boss');
+        this.ui.showBoss(B.name, B.hp, B.maxHp);
+        this.ui.hint('Jump over his shockwaves. When he gets dizzy, <b>ground pound</b> his head!');
+      } else if (e.type === 'bossslam') {
+        this.audio.play('pound_land', { vol: 0.9, rate: 0.8 });
+        this.cam.shake = 0.7;
+      } else if (e.type === 'bossdizzy') {
+        this.audio.play('bounce', { vol: 0.5, rate: 0.7 });
+      } else if (e.type === 'bosshit') {
+        this.audio.play('token', { vol: 0.9, rate: 0.8 });
+        phys.bounce(15);
+        this.hitStop = 0.14;
+        this.cam.shake = 0.8;
+        this.ui.showBoss(this.world.boss.name, e.hp, this.world.boss.maxHp);
+      } else if (e.type === 'bossdead') {
+        this.audio.play('win', { vol: 0.9 });
+        this.ui.hideBoss();
+        this.ui.popup('The Glitch King is defeated!', 'token');
+        setTimeout(() => this.state === 'play' && this.ui.hint('The portal is open. Step through to finish!'), 1600);
       } else if (e.type === 'hint') {
         this.ui.hint(e.text);
       } else if (e.type === 'goal') {
@@ -865,6 +921,9 @@ class Game {
       this.player.snapTo(this.native.physics.state());
       this.cam.snap(sp, this.cam.yaw);
       this.invuln = 1.2;
+      this.native.fx.emit(this.native.fx.T.RING, [sp[0], sp[1] + 0.4, sp[2]], 18, this.hero().dash, 5);
+      this.native.fx.emit(this.native.fx.T.BURST, [sp[0], sp[1] + 0.8, sp[2]], 16, this.hero().dash, 4);
+      this.audio.play('checkpoint', { vol: 0.35, rate: 1.4 });
     } else {
       P.fade = Math.max(0, 1 - (this.respawnT - 0.6) / 0.5);
       this.player.update(dt, this.native.physics.state());
@@ -890,6 +949,12 @@ class Game {
     r.setParticles(fxs.data, fxs.count);
     r.render(this.cam, w.env, this.time);
   }
+}
+
+function ambienceFor(lv) {
+  const th = lv.theme || {};
+  if (th.ambience) return th.ambience;
+  return { water: 'waves', clouds: 'wind', sand: 'wind', nebula: 'space', lava: 'lava' }[th.floor] || 'wind';
 }
 
 const ENDINGS = {

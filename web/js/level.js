@@ -4,6 +4,7 @@ import { lin } from './gl.js';
 import * as M from './meshes.js';
 import * as MH from './meshes_mh.js';
 import * as MHero from './meshes_heroes.js';
+import { FOE_TYPES, makeFoe, updateFoe, updateOrbs, drawFoe, drawOrbs, windAt, makeBoss, updateBoss, drawBoss } from './foes.js';
 
 const hex = M.hex;
 
@@ -86,7 +87,7 @@ export class World {
     let seedN = 1;
     for (const s of data.solids) {
       const shape = s.shape === 'box' ? 0 : 1;
-      const kind = s.kind === 'bounce' ? 1 : 0;
+      const kind = s.kind === 'bounce' ? 1 : s.kind === 'ice' ? 2 : 0;
       const id = phys.add(shape, s.pos, s.size, kind, s.power || 0);
       const vis = s.visual?.type || 'block';
       const colors = s.colors;
@@ -214,6 +215,11 @@ export class World {
     this.stomped = 0;
     this.cratesSmashed = 0;
     this.lasers = data.lasers.map((l) => ({ ...l, angle: 0 }));
+    this.orbs = [];
+    this.winds = (data.winds || []).map((w) => ({ ...w }));
+    this.windPush = [0, 0];
+    this.boss = makeBoss(data.boss);
+    this.bossTotal = this.boss ? 1 : 0;
 
     this.time = 0;
     this.sparkGot = 0;
@@ -236,6 +242,7 @@ export class World {
   }
 
   makeEnemy(e, i) {
+    if (FOE_TYPES.has(e.type)) return makeFoe(e, i);
     if (e.type === 'wisp') return { type: 'wisp', home: [...e.pos], pos: [...e.pos], range: e.range || 7, speed: e.speed || 3, alive: true, dead: 0, phase: i * 1.7, yaw: 0 };
     return { type: 'glitchling', a: e.a, b: e.b, pos: [...e.a], speed: e.speed || 2.5, t: 0, dir: 1, alive: true, dead: 0, yaw: 0, phase: i * 1.3 };
   }
@@ -315,7 +322,8 @@ export class World {
       c.t += dt;
     }
     // goal
-    if (Math.hypot(this.goal[0] - p[0], this.goal[2] - p[2]) < 2.0 && p[1] > this.goal[1] - 1 && p[1] < this.goal[1] + 4) out.push({ type: 'goal' });
+    const locked = this.boss && this.boss.state !== 'gone';
+    if (!locked && Math.hypot(this.goal[0] - p[0], this.goal[2] - p[2]) < 2.0 && p[1] > this.goal[1] - 1 && p[1] < this.goal[1] + 4) out.push({ type: 'goal' });
 
     // hints
     for (const h of this.hints) {
@@ -348,6 +356,8 @@ export class World {
             out.push({ type: 'hurt', from: np });
           }
         }
+      } else if (FOE_TYPES.has(e.type)) {
+        updateFoe(this, e, dt, player, invuln, out);
       } else {
         // wisp: hover, chase when the player is near
         const toP = v3.sub(center, e.pos);
@@ -377,6 +387,17 @@ export class World {
       }
     }
 
+    updateOrbs(this, dt, player, invuln, out);
+    updateBoss(this, dt, player, invuln, out);
+    // wind gusts
+    const wnd = windAt(this, p, t);
+    this.windPush = [wnd.x, wnd.z];
+    if (wnd.active && !this.windWarned) { this.windWarned = true; out.push({ type: 'wind' }); }
+    if (!wnd.active) this.windWarned = false;
+    if (wnd.active && Math.random() < dt * 30) {
+      const a = Math.random() * Math.PI * 2, rr = Math.random() * 5;
+      fx.emit(fx.T.TRAIL, [p[0] + Math.cos(a) * rr - wnd.x * 0.4, p[1] + 0.3 + Math.random() * 2, p[2] + Math.sin(a) * rr - wnd.z * 0.4], 1, [1.6, 1.4, 1.1], 0.12);
+    }
     // sunbeam sweepers
     for (const L of this.lasers) {
       L.angle = t * L.speed;
@@ -494,14 +515,15 @@ export class World {
     const gp = this.goal;
     r.draw({ mesh: sh.portal.base, model: m4.trs(gp), rim: 0.3 });
     r.draw({ mesh: sh.portal.ring, model: m4.trs([gp[0], gp[1] + Math.sin(t * 1.5) * 0.08, gp[2]], t * 0.4), emissive: [0.5, 0.35, 0.1], rim: 0.7, spec: 0.7, outline: 0.8 });
-    r.drawFx({ mesh: sh.portal.disc, model: m4.trs([gp[0], gp[1], gp[2]], Math.atan2(cam.pos[0] - gp[0], cam.pos[2] - gp[2])), mode: 1, colA: lin(this.accent).map((x) => x * 1.2), colB: [1.0, 0.85, 0.5], param: 1.0, depth: v3.dist(cam.pos, gp) });
+    const asleep = this.boss && this.boss.state !== 'gone';
+    r.drawFx({ mesh: sh.portal.disc, model: m4.trs([gp[0], gp[1], gp[2]], Math.atan2(cam.pos[0] - gp[0], cam.pos[2] - gp[2])), mode: 1, colA: asleep ? [0.15, 0.12, 0.18] : lin(this.accent).map((x) => x * 1.2), colB: asleep ? [0.25, 0.2, 0.3] : [1.0, 0.85, 0.5], param: asleep ? 0.4 : 1.0, depth: v3.dist(cam.pos, gp) });
 
     // enemies
     for (const e of this.enemies) {
       if (!e.alive) {
         if (e.dead < 0.35) {
           const s = 1 - e.dead / 0.35;
-          const mesh = e.type === 'wisp' ? sh.wisp.body : sh.glitch.body;
+          const mesh = e.type === 'wisp' ? sh.wisp.body : e.type === 'rambot' ? sh.rambot.body : e.type === 'spitpod' ? sh.spitpod.base : e.type === 'shellback' ? sh.shellback.body : sh.glitch.body;
           r.draw({ mesh, model: m4.trs(e.pos, e.yaw, 0, 0, [1 + (1 - s), s * 0.3 + 0.05, 1 + (1 - s)]), flash: 0.5 });
         }
         continue;
@@ -518,6 +540,8 @@ export class World {
           const a = t * 2.5 + k * 2.09 + e.phase;
           r.draw({ mesh: sh.glitch.bit, model: m4.trs([pos[0] + Math.cos(a) * 0.75, pos[1] + 0.6 + Math.sin(a * 2) * 0.2, pos[2] + Math.sin(a) * 0.75], a, a), emissive: [1.4, 0.4, 1.1], noShadow: true });
         }
+      } else if (FOE_TYPES.has(e.type)) {
+        drawFoe(this, r, e, t, cam);
       } else {
         const bob = Math.sin(t * 3 + e.phase) * 0.15;
         const pos = [e.pos[0], e.pos[1] + bob, e.pos[2]];
@@ -528,6 +552,8 @@ export class World {
       }
     }
 
+    drawOrbs(this, r, cam);
+    drawBoss(this, r, t, cam);
     // sweepers
     for (const L of this.lasers) {
       r.draw({ mesh: sh.laser.post, model: m4.trs(L.pos), emissive: [0, 0, 0], rim: 0.3 });

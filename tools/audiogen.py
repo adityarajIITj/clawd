@@ -232,6 +232,94 @@ def sfx_all() -> dict[str, np.ndarray]:
     return {k: normalize(v, 0.85) for k, v in s.items()}
 
 
+# ----------------------------------------------------------------------------
+# ambient soundscapes: seamless 14 s mono loops, one per kind of world
+# ----------------------------------------------------------------------------
+AMB_SR = 16000
+
+
+def _band(x: np.ndarray, lo: float, hi: float, sr: int) -> np.ndarray:
+    X = np.fft.rfft(x)
+    f = np.fft.rfftfreq(len(x), 1 / sr)
+    X[(f < lo) | (f > hi)] = 0
+    return np.fft.irfft(X, len(x))
+
+
+def _loop(x: np.ndarray, sr: int, fade: float = 1.5) -> np.ndarray:
+    """Crossfade the tail into the head so the clip loops without a seam."""
+    n = int(fade * sr)
+    body, tail = x[:-n].copy(), x[-n:]
+    ramp = np.linspace(0, 1, n)
+    body[:n] = body[:n] * ramp + tail * (1 - ramp)
+    return body
+
+
+def ambience_all() -> dict[str, np.ndarray]:
+    sr, dur = AMB_SR, 15.5
+    n = int(sr * dur)
+    t = np.arange(n) / sr
+    rng = np.random.default_rng(99)
+    w = rng.uniform(-1, 1, n)
+    out = {}
+    # wind: band-limited noise with slow, overlapping swells
+    swell = 0.55 + 0.25 * np.sin(2 * np.pi * t / 7.75) + 0.2 * np.sin(2 * np.pi * t / 3.1 + 1.3)
+    out["wind"] = _band(w, 120, 900, sr) * swell + 0.25 * _band(w, 900, 2400, sr) * swell ** 3
+    # rain: dense hiss plus random drips
+    hiss = _band(w, 1500, 7000, sr) * 0.6 + _band(w, 200, 1500, sr) * 0.35
+    drips = np.zeros(n)
+    for _ in range(260):
+        i = rng.integers(0, n - 800)
+        f = rng.uniform(1800, 4200)
+        k = np.arange(800) / sr
+        drips[i:i + 800] += np.sin(2 * np.pi * f * k * (1 - k * 4)) * np.exp(-k / 0.012) * rng.uniform(0.2, 0.7)
+    out["rain"] = hiss + drips * 0.5
+    # waves: low surf that rises and falls every few seconds
+    surf = np.clip(np.sin(2 * np.pi * t / (dur / 3)), 0, 1) ** 1.5
+    out["waves"] = _band(w, 60, 700, sr) * (0.25 + surf) + _band(w, 700, 3000, sr) * surf ** 2 * 0.4
+    # night: crickets chirping over a soft breeze
+    cr = np.zeros(n)
+    for c in range(5):
+        f0 = rng.uniform(3800, 5200)
+        rate = rng.uniform(2.2, 3.4)
+        gate = (np.sin(2 * np.pi * rate * t + c) > 0.55) * (np.sin(2 * np.pi * 28 * t + c) > 0)
+        cr += np.sin(2 * np.pi * f0 * t) * gate * rng.uniform(0.15, 0.3)
+    out["night"] = _band(cr, 3000, 6500, sr) + _band(w, 100, 600, sr) * 0.35
+    # space: low hum and a faint shimmer
+    hum = sum(np.sin(2 * np.pi * f * t + ph) * a for f, ph, a in ((55, 0, 0.5), (82.5, 1, 0.3), (110.3, 2, 0.2)))
+    out["space"] = hum * (0.6 + 0.4 * np.sin(2 * np.pi * t / 7.75)) * 0.5 + _band(w, 4000, 7000, sr) * 0.08
+    # lava: deep rumble with bubbling pops
+    pops = np.zeros(n)
+    for _ in range(90):
+        i = rng.integers(0, n - 2400)
+        k = np.arange(2400) / sr
+        f = rng.uniform(120, 260)
+        pops[i:i + 2400] += np.sin(2 * np.pi * f * k * (1 + k * 6)) * np.exp(-k / 0.04) * rng.uniform(0.3, 0.8)
+    out["lava"] = _band(w, 25, 180, sr) * 1.4 + pops * 0.6
+    # city: traffic hum, distant horns
+    traffic = _band(w, 60, 500, sr) * (0.7 + 0.3 * np.sin(2 * np.pi * t / 5.2))
+    horns = np.zeros(n)
+    for start in (2.3, 6.9, 11.4):
+        i = int(start * sr)
+        k = np.arange(int(0.45 * sr)) / sr
+        tone = (np.sign(np.sin(2 * np.pi * 410 * k)) + np.sign(np.sin(2 * np.pi * 517 * k))) * 0.5
+        horns[i:i + len(k)] += _band(tone, 200, 2500, sr) * np.minimum(1, k / 0.03) * np.exp(-k / 0.3) * 0.35
+    out["city"] = traffic + horns
+    res = {}
+    for k, v in out.items():
+        v = _loop(v, sr)
+        res[k] = v / (np.max(np.abs(v)) + 1e-9) * 0.7
+    return res
+
+
+def write_wav_sr(path: Path, data: np.ndarray, sr: int) -> None:
+    pcm = (np.clip(data, -1, 1) * 32767).astype("<i2")
+    with wave.open(str(path), "wb") as wv:
+        wv.setnchannels(1)
+        wv.setsampwidth(2)
+        wv.setframerate(sr)
+        wv.writeframes(pcm.tobytes())
+
+
 def main() -> None:
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "dist/audio")
     out.mkdir(parents=True, exist_ok=True)
@@ -239,6 +327,10 @@ def main() -> None:
     for name, data in sfx.items():
         write_wav(out / f"sfx_{name}.wav", data)
     print(f"  [audio] {len(sfx)} sound effects")
+    amb = ambience_all()
+    for name, data in amb.items():
+        write_wav_sr(out / f"amb_{name}.wav", data, AMB_SR)
+    print(f"  [audio] {len(amb)} ambient loops")
 
 
 if __name__ == "__main__":

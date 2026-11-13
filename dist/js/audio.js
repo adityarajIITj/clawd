@@ -15,7 +15,9 @@ export class Audio {
     this.buffers = {};
     this.music = null;
     this.musicName = null;
-    this.vol = { master: 0.8, music: 0.55, sfx: 0.8 };
+    this.vol = { master: 0.8, music: 0.55, sfx: 0.8, amb: 0.6 };
+    this.amb = null;
+    this.ambName = null;
     try {
       const saved = JSON.parse(localStorage.getItem('clawd.audio') || 'null');
       if (saved) Object.assign(this.vol, saved);
@@ -30,8 +32,10 @@ export class Audio {
     this.master.connect(this.ctx.destination);
     this.musicBus = this.ctx.createGain();
     this.sfxBus = this.ctx.createGain();
+    this.ambBus = this.ctx.createGain();
     this.musicBus.connect(this.master);
     this.sfxBus.connect(this.master);
+    this.ambBus.connect(this.master);
     this.applyVolumes();
     // Only one tab/window plays at a time: the one in use claims audio, the others go quiet.
     this.tabId = Math.random();
@@ -82,6 +86,7 @@ export class Audio {
     this.master.gain.value = this.vol.master;
     this.musicBus.gain.value = this.vol.music;
     this.sfxBus.gain.value = this.vol.sfx;
+    if (this.ambBus) this.ambBus.gain.value = (this.vol.amb ?? 0.6) * 0.55;
     localStorage.setItem('clawd.audio', JSON.stringify(this.vol));
   }
 
@@ -128,6 +133,42 @@ export class Audio {
     src.start();
     this.music = { src, gain };
     this.musicName = name;
+  }
+
+  // Ambient soundscape loop for the current world (lazy-loaded, crossfaded).
+  playAmbience(name, fade = 2.0) {
+    if (!this.ctx || this.ambName === name) return;
+    this.ambName = name;
+    const now = this.ctx.currentTime;
+    if (this.amb) {
+      const old = this.amb;
+      old.gain.gain.cancelScheduledValues(now);
+      old.gain.gain.setValueAtTime(old.gain.gain.value, now);
+      old.gain.gain.linearRampToValueAtTime(0, now + fade);
+      old.src.stop(now + fade + 0.1);
+      this.amb = null;
+    }
+    if (!name) return;
+    const key = `amb_${name}`;
+    const start = (buf) => {
+      if (!buf || this.ambName !== name) return;
+      const t = this.ctx.currentTime;
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(1, t + fade);
+      src.connect(gain).connect(this.ambBus);
+      src.start(0, Math.random() * buf.duration);
+      this.amb = { src, gain };
+    };
+    if (this.buffers[key]) return start(this.buffers[key]);
+    if (!this.loading[key]) {
+      this.loading[key] = fetch(`audio/${key}.wav`).then((r) => r.arrayBuffer()).then((b) => this.ctx.decodeAudioData(b))
+        .then((buf) => { this.buffers[key] = buf; return buf; }).catch(() => { delete this.loading[key]; return null; });
+    }
+    this.loading[key].then(start);
   }
 
   duck(amount, time = 0.3) {

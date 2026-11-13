@@ -282,3 +282,14 @@ pos = [0, 4.4, 45]
 radius = 3
 text = "Press <b>F</b> to <b>dash</b> — on the ground or once in mid-air. It carries you across long gaps"
 
+
+[[enemy]]
+type = "shellback"
+a = [-3, 7.5, 104]
+b = [3, 7.5, 104]
+speed = 1.2
+
+[[hint]]
+pos = [0, 7.5, 101]
+radius = 3
+text = "A Shellback! Stomping just bounces off — <b>ground pound</b> it (SHIFT in mid-air)"

@@ -21,6 +21,12 @@ export async function loadNative() {
     groundHeight: (x, y, z, range) => C.world_ground_height(x, y, z, range),
     playerReset: (x, y, z) => C.player_reset(x, y, z),
     playerParams: (g, s) => C.player_set_params(g, s),
+    push: (x, z) => C.player_set_push(x, z),
+    // returns exactly `max` when clear (the wasm side works in f32, so 0.9 comes back as 0.8999999)
+    raycast: (o, d, max, minRadius = 0) => {
+      const t = C.world_raycast(o[0], o[1], o[2], d[0], d[1], d[2], max, minRadius);
+      return t >= max * 0.9999 ? max : t;
+    },
     bounce: (vy) => C.player_bounce(vy),
     knock: (x, y, z) => C.player_knock(x, y, z),
     step: (dt, ix, iz, held, pressed, pound, dash) => C.player_step(dt, ix, iz, held ? 1 : 0, pressed ? 1 : 0, pound ? 1 : 0, dash ? 1 : 0),

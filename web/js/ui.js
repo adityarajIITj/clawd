@@ -139,6 +139,16 @@ export class UI {
 
   resetHUD() { this.hudState = {}; }
 
+  showBoss(name, hp, max) {
+    const el = $('#bossbar');
+    if (!el) return;
+    el.innerHTML = `<div class="bb-name">${name}</div><div class="bb-segs">${Array.from({ length: max }, (_, i) => `<i class="${i < hp ? 'on' : ''}"></i>`).join('')}</div>`;
+    el.classList.add('show');
+    this.pulse('#bossbar');
+  }
+
+  hideBoss() { const el = $('#bossbar'); if (el) el.classList.remove('show'); }
+
   setCollectibleIcons(mode) {
     iconMode = mode;
     const el = $('#sparkIcon');
