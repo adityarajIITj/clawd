@@ -6,7 +6,6 @@ import { Camera } from './camera.js';
 import { Clawd, Manus, Mahak, Lingraj } from './player.js';
 import { HEROES, HERO_ORDER, SETS, HERO_ART } from './heroes.js';
 import { buildMahak, buildLingraj, buildBrahmaKamal, buildMonal, buildRasagola, buildKonarkWheel } from './meshes_heroes.js';
-import { loadProfile, saveTag, randomTag } from './profile.js';
 import { buildManus, buildLizard, buildKomodo } from './meshes_mh.js';
 import { World } from './level.js';
 import { UI, fmtTime, starIcon } from './ui.js';
@@ -32,7 +31,7 @@ class Game {
     this.applyQualityPreset(false);
     const savedHero = localStorage.getItem('clawd.character');
     this.character = HEROES[savedHero] ? savedHero : 'clawd';
-    this.profile = loadProfile();
+    localStorage.removeItem('clawd.profile'); // the old gamer-tag record, no longer used
     this.mapSet = null;
     this.settingsTab = 'sound';
     this.resetArmed = false;
@@ -281,7 +280,6 @@ class Game {
             <button class="pill" data-act="credits">Credits</button>
           </div>
         </div>
-        <button class="profile-chip" data-act="profile" title="Your gamer tag"><i class="dot" style="background:${h.color}"></i><span>${esc(this.profile.tag)}</span></button>
         <div class="foot">Rendered in WebGL2 · Physics in Rust · VFX in C++ · Levels built in Python</div>
       </div>`, 'title');
   }
@@ -403,10 +401,7 @@ class Game {
       case 'characters': this.showCharacters(); break;
       case 'continue': { const c = this.continueTarget(); if (c) this.startWorld(c); else this.showSelect(); break; }
       case 'map-tab': this.mapSet = data.set; this.showSelect(); break;
-      case 'profile': this.settingsTab = 'profile'; this.showSettings(); break;
       case 'settings-tab': this.settingsTab = data.tab; this.resetArmed = false; this.showSettings(); break;
-      case 'save-tag': this.applyTag(document.getElementById('tagInput')?.value); break;
-      case 'reroll-tag': this.applyTag(randomTag()); break;
       case 'reset-progress': this.resetProgress(); break;
       case 'pick-char': this.setCharacter(data.id); break;
       case 'select': this.audio.duck(1); this.showSelect(); if (this.levelId) this.ui.showHUD(false); break;
@@ -422,7 +417,7 @@ class Game {
         else this.showEnding();
         break;
       }
-      case 'settings': if (this.settingsTab === 'profile') this.settingsTab = 'sound'; this.showSettings(); break;
+      case 'settings': this.showSettings(); break;
       case 'settings-back': if (this.prevState === 'paused') { this.state = 'play'; this.pause(); } else this.toTitle(); break;
       case 'howto': this.showHowTo(); break;
       case 'credits': this.showCredits(); break;
@@ -436,7 +431,7 @@ class Game {
     const v = this.audio.vol, s = this.settings;
     const slider = (key, label, val, min = 0, max = 1, step = 0.05) =>
       `<label class="set"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-key="${key}"></label>`;
-    const tabs = [['sound', 'Sound'], ['graphics', 'Graphics'], ['controls', 'Controls'], ['profile', 'Profile']];
+    const tabs = [['sound', 'Sound'], ['graphics', 'Graphics'], ['controls', 'Controls'], ['progress', 'Progress']];
     const cur = this.settingsTab;
     const qHint = { low: 'Fastest. Best for older phones.', medium: 'Balanced for most phones and laptops.', high: 'Sharpest image and softest shadows.' };
     let body = '';
@@ -451,13 +446,10 @@ class Game {
         <label class="set"><span>Invert camera Y</span><input type="checkbox" data-key="invertY" ${s.invertY ? 'checked' : ''}></label>
         <p class="note small">${this.input.touch.enabled ? 'Touch: drag the left side to move, the right side to look. Jump, Pound and Dash buttons sit on the right.' : 'Keyboard: WASD move · Space jump · Shift pound · F dash · Esc pause. Gamepads work too.'}</p>`;
     } else {
-      body = `<label class="set tag-row"><span>Gamer tag<small>Saved in this browser. No login needed.</small></span>
-          <span class="tag-edit"><input id="tagInput" type="text" maxlength="16" value="${esc(this.profile.tag)}" spellcheck="false" autocomplete="off">
-          <button data-act="save-tag" class="mini">Save</button><button data-act="reroll-tag" class="mini ghost-mini" title="Random tag">Random</button></span></label>
-        <div id="tagMsg" class="tag-msg"></div>
-        <div class="set"><span>Hero<small>${this.hero().from}</small></span><button data-act="characters" class="mini">${this.hero().name}</button></div>
+      body = `<div class="set"><span>Hero<small>${this.hero().from}</small></span><button data-act="characters" class="mini">${this.hero().name}</button></div>
         <div class="set"><span>Progress<small>${this.manifest.filter((m) => this.save.levels[m.id]?.done).length} worlds done · ${this.questStars()} quest stars</small></span>
-          <button data-act="reset-progress" class="mini danger">${this.resetArmed ? 'Tap again to erase' : 'Reset progress'}</button></div>`;
+          <button data-act="reset-progress" class="mini danger">${this.resetArmed ? 'Tap again to erase' : 'Reset progress'}</button></div>
+        <div id="setMsg" class="set-msg"></div>`;
     }
     this.ui.show('settings', `
       <div class="panel wide settings-panel">
@@ -469,22 +461,6 @@ class Game {
     if (this.prevState === 'paused') this.state = 'paused';
     const tabIdx = this.ui.buttons().findIndex((b) => b.dataset.tab === cur);
     if (tabIdx >= 0) this.ui.focus(tabIdx, true);
-    const inp = document.getElementById('tagInput');
-    if (inp) inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.applyTag(inp.value); });
-  }
-
-  applyTag(tag) {
-    const res = saveTag(this.profile, tag);
-    if (!res.ok) {
-      const m = document.getElementById('tagMsg');
-      if (m) { m.textContent = res.error; m.className = 'tag-msg err'; }
-      this.audio.play('hurt', { vol: 0.3 });
-      return;
-    }
-    this.audio.play('checkpoint', { vol: 0.5 });
-    this.showSettings();
-    const m = document.getElementById('tagMsg');
-    if (m) { m.textContent = `Saved. You are ${this.profile.tag}.`; m.className = 'tag-msg ok'; }
   }
 
   resetProgress() {
@@ -493,8 +469,8 @@ class Game {
     this.save = { unlocked: 1, levels: {} };
     localStorage.setItem('clawd.save', JSON.stringify(this.save));
     this.showSettings();
-    const m = document.getElementById('tagMsg');
-    if (m) { m.textContent = 'Progress erased. Fresh start!'; m.className = 'tag-msg ok'; }
+    const m = document.getElementById('setMsg');
+    if (m) m.textContent = 'Progress erased. Fresh start!';
   }
 
   setSetting(key, value) {

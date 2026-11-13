@@ -111,12 +111,11 @@ are original characters with modelled faces: Mahak wears a knitted sweater, a gh
 and a long braid with a red tassel; Lingraj wears a kurta with an ikat border, a dhoti and a checked
 gamucha.
 
-## Gamer tag and settings
+## Settings
 
-The first time the game opens, it makes up a gamer tag (like `FilmyYak32`) and remembers it in that
-browser, so there's no login. Tap the tag at the top right of the home screen to rename it
-(3–16 letters, numbers or `_`). Settings are split into Sound, Graphics, Controls and Profile
-tabs; Profile also has a reset-progress button that asks for a second tap.
+Settings are split into Sound, Graphics, Controls and Progress tabs. Progress shows your hero and
+has a reset button that asks for a second tap before erasing anything. Everything is saved in the
+browser, so there are no accounts.
 
 ## Music
 
