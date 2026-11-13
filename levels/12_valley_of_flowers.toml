@@ -1,0 +1,297 @@
+# ============================================================================
+#  HIMALAYAN TRAILS · WORLD 1 — VALLEY OF FLOWERS
+#  Alpine meadows in Uttarakhand: deodars, rhododendrons, slate huts, temple bells.
+# ============================================================================
+[level]
+id = 12
+campaign = "pahadi"
+name = "Valley of Flowers"
+subtitle = "Where the Brahma Kamal blooms above the clouds"
+story = "High in the Uttarakhand Himalaya, the monsoon has turned the valley into a carpet of flowers. Rhododendrons blaze red between the deodars, temple bells ring on the ridge, and the trail climbs all the way up to the summit shrine."
+music = "kandil"
+quests = ["all_sparks", "crates", "tokens"]
+seed = 1212
+spawn = [0, 0.5, 0]
+goal = [26, 14, 111]
+parTime = 130
+
+[theme]
+skyTop = "#3f7fd6"
+skyHorizon = "#cfe6f8"
+skyBottom = "#eaf4fb"
+sunColor = "#fff4e0"
+sunDir = [-0.5, 0.6, -0.3]
+sunIntensity = 2.5
+ambSky = "#a8c8ec"
+ambGround = "#7a9a6a"
+fogColor = "#dceaf6"
+fogDensity = 0.0055
+floor = "clouds"
+floorY = -18
+floorColor = "#f6fbff"
+floorColor2 = "#b8cce0"
+clouds = 0.55
+stars = 0
+bloom = 0.5
+exposure = 1.0
+saturation = 1.08
+contrast = 1.03
+particles = "mote"
+particleColor = "#fff8d8"
+accent = "#c84a6a"
+wind = [0.6, 0.3]
+
+[[island]]
+pos = [0, 0, 0]
+radius = 8
+style = "alpine"
+decor = "himalaya"
+
+[[island]]
+pos = [0, 2.5, 32]
+radius = 7
+style = "alpine"
+decor = "himalaya"
+density = 0.7
+
+[[island]]
+pos = [-12, 4.5, 26]
+radius = 2.5
+style = "alpine"
+
+[[island]]
+pos = [26, 6, 47]
+radius = 6
+style = "alpine"
+decor = "himalaya"
+density = 0.6
+
+[[island]]
+pos = [26, 8, 78]
+radius = 7
+style = "alpine"
+decor = "himalaya"
+density = 0.7
+
+[[island]]
+pos = [26, 14, 108]
+radius = 7
+style = "slate"
+decor = "himalaya"
+density = 0.4
+
+# snowy peaks on the horizon
+[[island]]
+pos = [-60, 25, 80]
+radius = 20
+shape = "pillar"
+depth = 60
+style = "ice"
+decor = "frost"
+density = 0.3
+
+[[island]]
+pos = [85, 35, 60]
+radius = 22
+shape = "pillar"
+depth = 70
+style = "ice"
+decor = "frost"
+density = 0.25
+
+[[island]]
+pos = [30, 45, 175]
+radius = 26
+shape = "pillar"
+depth = 80
+style = "ice"
+decor = "frost"
+density = 0.25
+
+[[path]]
+from = [0, 0.6, 12]
+to = [0, 1.6, 22]
+count = 3
+radius = 1.6
+style = "slate"
+
+[[path]]
+from = [8, 3, 37]
+to = [16, 5, 43]
+count = 3
+radius = 1.5
+style = "slate"
+move = { type = "bob", amp = 0.8, speed = 1.0, stagger = 1.0 }
+
+# glacier blocks sliding across the stream
+[[path]]
+from = [26, 6.5, 57]
+to = [26, 7.5, 67]
+count = 3
+shape = "block"
+size = [3, 0.8, 3]
+style = "ice"
+move = { type = "line", axis = [1, 0, 0], amp = 2.5, speed = 1.0 }
+alternate = true
+
+# stone steps up to the summit shrine
+[[path]]
+from = [26, 9, 88]
+to = [26, 13, 98]
+count = 4
+shape = "block"
+size = [3, 0.8, 2.6]
+style = "slate"
+
+[[disc]]
+pos = [16, 15, 88]
+radius = 1.8
+style = "alpine"
+
+[[disc]]
+pos = [34, 21, 116]
+radius = 1.8
+style = "slate"
+
+# invisible collider for the hut
+[[disc]]
+pos = [-4.5, 4.9, 35]
+radius = 1.4
+height = 2.4
+visual = "none"
+style = "stone"
+
+[[bouncer]]
+pos = [22, 8, 82]
+power = 24
+
+[[bouncer]]
+pos = [30, 14, 112]
+power = 22
+
+[[crate]]
+pos = [3, 2.5, 29]
+contains = "sparks"
+
+[[crate]]
+pos = [29, 6, 44]
+contains = "heart"
+
+[[crate]]
+pos = [29, 8, 75]
+contains = "sparks"
+
+[[sparks]]
+type = "ring"
+center = [0, 1.2, 0]
+radius = 4.5
+count = 8
+
+[[sparks]]
+type = "ring"
+center = [0, 3.7, 32]
+radius = 3.6
+count = 7
+
+[[sparks]]
+type = "ring"
+center = [26, 7.2, 47]
+radius = 3.4
+count = 6
+
+[[sparks]]
+type = "ring"
+center = [26, 9.2, 78]
+radius = 4.2
+count = 8
+
+[[sparks]]
+type = "column"
+pos = [22, 10, 82]
+count = 5
+step = 1.3
+
+[[sparks]]
+type = "ring"
+center = [26, 15.2, 108]
+radius = 4.2
+count = 8
+
+[[token]]
+pos = [-12, 5.3, 26]
+
+[[token]]
+pos = [16, 15.8, 88]
+
+[[token]]
+pos = [34, 21.8, 116]
+
+[[checkpoint]]
+pos = [23, 6, 45]
+
+[[checkpoint]]
+pos = [23, 8, 76]
+
+[[enemy]]
+type = "glitchling"
+a = [22, 8, 80]
+b = [30, 8, 80]
+speed = 2.0
+
+[[enemy]]
+type = "glitchling"
+a = [-3, 2.5, 34]
+b = [3, 2.5, 30]
+speed = 1.8
+
+[[enemy]]
+type = "wisp"
+pos = [26, 16, 104]
+range = 7
+speed = 2.6
+
+[[hint]]
+pos = [0, 0, 0]
+radius = 5
+text = "Welcome to the Valley of Flowers, high in the Himalaya. Breathe in that mountain air"
+
+[[hint]]
+pos = [26, 8, 72]
+radius = 3
+text = "Hear the bells? The summit shrine is just up those stone steps"
+
+[[decor]]
+mesh = "hut"
+pos = [-4.5, 2.5, 35]
+rot = 0.6
+scale = 1.0
+
+[[decor]]
+mesh = "bells"
+pos = [26, 6, 51.5]
+rot = 0.0
+scale = 1.0
+
+[[decor]]
+mesh = "bells"
+pos = [26, 14, 103]
+rot = 0.0
+scale = 1.1
+
+[[decor]]
+mesh = "hut"
+pos = [21, 14, 112]
+rot = -0.8
+scale = 1.0
+
+[[decor]]
+mesh = "waterfall"
+pos = [33.1, 7.8, 78]
+rot = 1.57
+size = [3, 22]
+
+[[decor]]
+mesh = "waterfall"
+pos = [-40, 24.8, 80]
+rot = 1.57
+size = [8, 50]

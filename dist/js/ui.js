@@ -1,4 +1,5 @@
 // DOM overlay: menus, HUD, toasts. Keyboard/gamepad navigable.
+import { HEROES } from './heroes.js';
 const $ = (s, el = document) => el.querySelector(s);
 
 const STAR_SVG = (size = 22, fill = 'currentColor') => {
@@ -11,12 +12,12 @@ const STAR_SVG = (size = 22, fill = 'currentColor') => {
   return `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><polygon points="${pts.join(' ')}" fill="${fill}" stroke-linejoin="round" stroke="${fill}" stroke-width="6"/></svg>`;
 };
 export const starIcon = STAR_SVG;
-const LIZARD_SVG = (size = 22, fill = '#4cc26a') => `<svg width="${size}" height="${size}" viewBox="0 0 100 100"><g fill="${fill}"><ellipse cx="50" cy="52" rx="13" ry="22"/><ellipse cx="50" cy="24" rx="10" ry="12"/><path d="M50 70 Q44 86 56 92 Q70 98 74 86 Q66 92 60 86 Q56 80 57 70Z"/><path d="M38 40 L22 30 L20 36 L36 46Z M62 40 L78 30 L80 36 L64 46Z M38 62 L22 74 L26 78 L40 68Z M62 62 L78 74 L74 78 L60 68Z"/></g><circle cx="45" cy="20" r="2.6" fill="#10200f"/><circle cx="55" cy="20" r="2.6" fill="#10200f"/></svg>`;
 let iconMode = 'clawd';
+const typing = () => { const a = document.activeElement; return a && (a.tagName === 'INPUT' && a.type === 'text' || a.tagName === 'TEXTAREA'); };
 
 
 const HEART = (on) => `<svg class="heart ${on ? 'on' : 'off'}" width="30" height="28" viewBox="0 0 32 30"><path d="M16 28 C 4 19, 1 12, 4 7 C 7 2, 13 2, 16 7 C 19 2, 25 2, 28 7 C 31 12, 28 19, 16 28 Z"/></svg>`;
-const COIN = (on) => `<span class="coin ${on ? 'on' : ''} ${iconMode}">${iconMode === 'manus' ? LIZARD_SVG(16, on ? '#4a3c2a' : 'rgba(255,255,255,0.4)') : STAR_SVG(14, on ? '#7a4a10' : 'rgba(255,255,255,0.35)')}</span>`;
+const COIN = (on) => { const h = HEROES[iconMode] || HEROES.clawd; return `<span class="coin ${on ? 'on' : ''} ${h.coin}">${h.icons.token(16, on)}</span>`; };
 
 export function fmtTime(t) {
   const m = Math.floor(t / 60), s = Math.floor(t % 60), cs = Math.floor((t * 100) % 100);
@@ -80,7 +81,7 @@ export class UI {
   }
 
   navigate(inp, keys) {
-    if (!this.current) return;
+    if (!this.current || typing()) return;
     const b = this.buttons();
     if (!b.length) return;
     const grid = this.screen.querySelector('.cards');
@@ -141,7 +142,7 @@ export class UI {
   setCollectibleIcons(mode) {
     iconMode = mode;
     const el = $('#sparkIcon');
-    if (el) el.innerHTML = mode === 'manus' ? LIZARD_SVG(24) : STAR_SVG(22, '#ffb37a');
+    if (el) el.innerHTML = (HEROES[mode] || HEROES.clawd).icons.spark(24);
     this.hudState = {};
   }
 

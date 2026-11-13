@@ -98,6 +98,10 @@ export class Renderer {
     this.particleCount = 0;
     this.post = { bloom: 0.6, exposure: 1.0, saturation: 1.05, contrast: 1.04, fade: 0, hurt: 0 };
     this.createShadow();
+    // 1x1 white texture so the fx shader's photo sampler never points at the shadow map
+    this.blankTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this.blankTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 255, 255, 255]));
     this.resize();
   }
 
@@ -428,18 +432,18 @@ export class Renderer {
     gl.depthMask(false);
     const fxp = this.progs.fx.use();
     this.setAtmos(fxp, env, time);
-    fxp.m4('u_viewProj', viewProj);
+    fxp.m4('u_viewProj', viewProj).i1('u_tex', 2);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.blankTex);
+    gl.activeTexture(gl.TEXTURE0);
     // sort back-to-front
     this.fxQueue.sort((a, b) => b.depth - a.depth);
     for (const it of this.fxQueue) {
       if (it.additive) gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
       else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      if (it.tex) {
-        gl.activeTexture(gl.TEXTURE2);
-        gl.bindTexture(gl.TEXTURE_2D, it.tex);
-        fxp.i1('u_tex', 2);
-        gl.activeTexture(gl.TEXTURE0);
-      }
+      gl.activeTexture(gl.TEXTURE2);
+      gl.bindTexture(gl.TEXTURE_2D, it.tex || this.blankTex);
+      gl.activeTexture(gl.TEXTURE0);
       fxp.m4('u_model', it.model).i1('u_mode', it.mode).f3('u_colA', it.colA || [1, 1, 1]).f3('u_colB', it.colB || [1, 1, 1])
         .f1('u_param', it.param ?? 1).f1('u_alpha', it.alpha ?? 1);
       gl.bindVertexArray(it.mesh.vao);

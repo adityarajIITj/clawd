@@ -125,10 +125,11 @@ export class Clawd {
 }
 
 // ---------------------------------------------------------------------------
-// Marathi Manus: same controller, human rig with his own idle personality.
-// Body centre sits 0.65 above the feet.
+// Human heroes (Marathi Manus, Mahak, Lingraj): shared chibi rig on the same
+// controller. Body centre sits 0.65 above the feet. Each hero supplies its own
+// idle routine through pose(); extras (braid, skirt, phone) via drawExtras().
 // ---------------------------------------------------------------------------
-export class Manus extends Clawd {
+class Human extends Clawd {
   constructor(parts) {
     super(parts);
     this.idleT = 0;
@@ -139,6 +140,10 @@ export class Manus extends Clawd {
     const hs = Math.hypot(st[3], st[5]);
     this.idleT = this.grounded && hs < 0.3 && !this.dance ? this.idleT + dt : 0;
   }
+
+  // Override: { headTilt, headYaw, headRoll, armL, armR, tongue, mouthOpen } where arm = { pitch, roll, yaw }
+  pose() { return {}; }
+  drawExtras() {}
 
   draw(r, invuln) {
     if (invuln > 0 && Math.floor(invuln * 14) % 2 === 0) return;
@@ -154,23 +159,23 @@ export class Manus extends Clawd {
     const root = m4.trs(base, this.yaw + this.spin, this.lean * 0.6 + this.flip + (dashing ? 0.55 : 0), 0, [sxz * 0.95, sy * 0.95, sxz * 0.95]);
     const flash = Math.max(0, this.flash) * 3;
     const put = (mesh, local, opts = {}) => r.draw({ mesh, model: m4.mul(root, local), outline: opts.outline || 0, rim: opts.rim ?? 0.4, flash, spec: opts.spec ?? 0.15 });
-
-    // idle routine: fix the bun (2.5-5s), then a selfie (5s+)
-    const idle = this.idleT;
-    const bunFix = idle > 2.5 && idle < 5.2;
-    const selfie = idle >= 5.2;
+    const ctx = { t, hs, run, dashing, idle: this.idleT, root, flash, r };
+    const pose = (this.grounded && hs < 0.3 && !this.dance) ? this.pose(ctx) : (this.dance ? this.dancePose(ctx) : {});
+    ctx.pose = pose;
     const breathe = this.grounded && hs < 0.3 ? Math.sin(t * 2.2) * 0.012 : 0;
 
     put(P.torso, m4.trs([0, 0.02 + breathe, 0]), { outline: 1.0 });
-    const headTilt = selfie ? 0.18 : bunFix ? -0.12 : 0;
-    const headYaw = selfie ? -0.12 : 0;
-    const head = m4.trs([0, 0.55 + breathe, 0.01], headYaw, headTilt, selfie ? -0.12 : 0);
+    const head = m4.trs([0, 0.55 + breathe, 0.01], pose.headYaw || 0, pose.headTilt || 0, pose.headRoll || 0);
+    ctx.head = head;
     put(P.head, head, { outline: 1.1 });
-    // photo face: neutral normally, tongue-out while dancing or taking a selfie
     if (this.faces) {
-      const fm = m4.mul(root, head);
-      r.drawFx({ mesh: P.facePlate, model: fm, mode: 5, tex: (this.dance || selfie) ? this.faces.tongue : this.faces.neutral,
+      // photo face (Marathi Manus): tongue-out photo while dancing or posing
+      r.drawFx({ mesh: P.facePlate, model: m4.mul(root, head), mode: 5, tex: pose.tongue ? this.faces.tongue : this.faces.neutral,
         param: this.faceLight ?? 1.2, colA: this.faceTint || [1, 1, 1], alpha: 1, depth: -1, flash });
+    } else {
+      for (const s of [-1, 1]) put(P.eye, m4.mul(head, m4.trs([s * 0.095, 0.03, 0.247], 0, 0, 0, [1, this.blink, 1])), { spec: 0.6, rim: 0 });
+      if (pose.mouthOpen) put(P.mouthOpen, m4.mul(head, m4.trs([0, -0.15, 0.24])), { rim: 0 });
+      else put(P.mouth, m4.mul(head, m4.trs([0, -0.15, 0.248])), { rim: 0 });
     }
 
     // arms (pivot at the shoulder)
@@ -180,14 +185,11 @@ export class Manus extends Clawd {
       let yaw = 0;
       if (this.pounding) { pitch = -2.6; roll = -s * 0.3; }
       if (dashing) { pitch = 1.25; roll = s * 0.25; }
-      if (this.dance) { pitch = -2.4 + Math.sin(t * 9 + s) * 0.5; roll = -s * (0.5 + Math.sin(t * 7 + s) * 0.3); }
-      if (s < 0 && bunFix) { pitch = -2.7; roll = 0.5 + Math.sin(t * 10) * 0.12; }
-      if (s > 0 && selfie) { pitch = -1.7; roll = 0.35; yaw = -0.4; }
+      const o = s < 0 ? pose.armL : pose.armR;
+      if (o) { pitch = o.pitch; roll = o.roll; yaw = o.yaw || 0; }
       const sh = m4.trs([s * 0.355, 0.19 + breathe, 0], yaw, pitch, roll);
       put(P.arm, sh, { outline: 0.9 });
-      if (s > 0 && (selfie || (!this.dance && this.grounded && hs < 0.3))) {
-        put(P.phone, m4.mul(sh, m4.trs([0, -0.44, 0.05], 0, selfie ? -0.2 : 1.3, 0)), { spec: 0.9, rim: 0.2 });
-      }
+      if (s > 0) ctx.rightShoulder = sh;
     }
     // legs (pivot at the hip)
     for (const s of [-1, 1]) {
@@ -196,5 +198,68 @@ export class Manus extends Clawd {
       if (this.dance) sw = Math.sin(t * 12 + (s > 0 ? Math.PI : 0)) * 0.35;
       put(P.leg, m4.trs([s * 0.12, -0.22, 0], 0, sw, 0), { outline: 0.9 });
     }
+    this.drawExtras(put, ctx);
+  }
+
+  dancePose({ t }) {
+    const w = (s) => ({ pitch: -2.4 + Math.sin(t * 9 + s) * 0.5, roll: -s * (0.5 + Math.sin(t * 7 + s) * 0.3) });
+    return { armL: w(-1), armR: w(1), mouthOpen: true, tongue: true };
+  }
+}
+
+// Marathi Manus: fixes his bun, then takes a selfie with his tongue out.
+export class Manus extends Human {
+  pose({ t, idle }) {
+    if (idle > 2.5 && idle < 5.2) return { headTilt: -0.12, armL: { pitch: -2.7, roll: 0.5 + Math.sin(t * 10) * 0.12 } };
+    if (idle >= 5.2) return { headTilt: 0.18, headYaw: -0.12, headRoll: -0.12, armR: { pitch: -1.7, roll: 0.35, yaw: -0.4 }, tongue: true, selfie: true };
+    return {};
+  }
+  drawExtras(put, { pose, rightShoulder, hs }) {
+    if (this.dance || !rightShoulder) return;
+    if (pose.selfie) put(this.parts.phone, m4.mul(rightShoulder, m4.trs([0, -0.44, 0.05], 0, -0.2, 0)), { spec: 0.9, rim: 0.2 });
+    else if (this.grounded && hs < 0.3) put(this.parts.phone, m4.mul(rightShoulder, m4.trs([0, -0.44, 0.05], 0, 1.3, 0)), { spec: 0.9, rim: 0.2 });
+  }
+}
+
+// Mahak: brings her braid over her shoulder, then shades her eyes to look across the valley.
+export class Mahak extends Human {
+  pose({ t, idle }) {
+    if (idle > 2.5 && idle < 5.5) return { headTilt: 0.1, headRoll: 0.12, armL: { pitch: -1.1, roll: 0.95, yaw: 0.4 }, braidFront: true };
+    if (idle >= 5.5) return { headTilt: -0.14, headYaw: Math.sin(t * 0.6) * 0.35, armR: { pitch: -2.35, roll: -0.75, yaw: 0.25 } };
+    return {};
+  }
+  dancePose(ctx) {
+    const p = super.dancePose(ctx);
+    p.tongue = false;
+    return p;
+  }
+  drawExtras(put, { pose, head, run, t, hs }) {
+    const P = this.parts;
+    // skirt flares when she dances or runs
+    const flare = this.dance ? 0.18 + Math.sin(t * 6) * 0.05 : run * 0.06;
+    put(P.skirt, m4.trs([0, -0.2, 0], 0, 0, 0, [1 + flare, 1, 1 + flare]), { outline: 0.9 });
+    // braid: trails behind while moving, swings when she jumps
+    const vy = this.vel[1];
+    let braid;
+    if (pose.braidFront) braid = m4.mul(head, m4.trs([-0.17, -0.12, 0.12], 0.2, -0.35, 0.15));
+    else {
+      const swing = clamp(0.15 + run * 0.7 + (this.grounded ? 0 : clamp(-vy * 0.03, -0.3, 0.6)) + Math.sin(t * 2 + hs) * 0.05, -0.2, 1.2);
+      braid = m4.mul(head, m4.trs([0, -0.05, -0.22], 0, swing, Math.sin(this.walk) * 0.08 * run));
+    }
+    put(P.braid, braid, { outline: 0.7 });
+  }
+}
+
+// Lingraj: wipes his forehead with his gamucha, then greets you with a namaskar.
+export class Lingraj extends Human {
+  pose({ t, idle }) {
+    if (idle > 2.5 && idle < 5.0) return { headTilt: -0.1, armL: { pitch: -2.55, roll: 0.62 + Math.sin(t * 7) * 0.1 } };
+    if (idle >= 5.0) return { headTilt: 0.16, armL: { pitch: -1.05, roll: 0.98, yaw: -0.25 }, armR: { pitch: -1.05, roll: -0.98, yaw: 0.25 } };
+    return {};
+  }
+  dancePose({ t }) {
+    // arms out and up, rolling at the wrists — a cheerful festival dance
+    const a = (s) => ({ pitch: -1.6 + Math.sin(t * 8 + s * 1.5) * 0.6, roll: -s * (1.0 + Math.sin(t * 8 + s) * 0.25) });
+    return { armL: a(-1), armR: a(1), mouthOpen: true, headRoll: Math.sin(t * 8) * 0.12 };
   }
 }

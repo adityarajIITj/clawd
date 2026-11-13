@@ -15,6 +15,8 @@ export class Input {
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      const tg = e.target;
+      if (tg && (tg.tagName === 'INPUT' && tg.type === 'text' || tg.tagName === 'TEXTAREA')) return;
       this.keys.add(e.code);
       this.pressed.add(e.code);
       this.lastDevice = 'kb';

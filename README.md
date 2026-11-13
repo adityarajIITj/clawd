@@ -1,8 +1,8 @@
 # ✷ CLAWD — The Spark Odyssey
 
 A 3D platformer by **Aditya**, starring **Clawd**, Claude's little terracotta mascot, and
-**Marathi Manus**. The Great Context Window has shattered, and its Sparks are scattered across
-eleven illustrated worlds.
+**Marathi Manus**, **Mahak** and **Lingraj**. The Great Context Window has shattered, and its Sparks are scattered across
+thirteen illustrated worlds.
 
 Every mesh, island, sound effect and level is generated from code. The only asset files are the
 soundtrack (`assets/music/`) and the photo for Marathi Manus's face (`assets/face/`).
@@ -53,6 +53,14 @@ with the `wasm32-unknown-unknown` target.
 3. **Kandil Lake**: a festival night with akash kandils, floating diyas, lotus leaves and fireflies.
 4. **Mumbai Nights**: rooftop hopping past water tanks and dish antennas, with kaali-peeli taxis as stepping stones.
 
+**Himalayan Trails**
+
+1. **Valley of Flowers**: alpine meadows in Uttarakhand with deodars, rhododendrons, a slate-roofed hut, temple bells and glacier blocks.
+
+**Odisha Shores**
+
+1. **Konark Sun Shore**: sunrise on the Bay of Bengal, with stone chariot wheels, a temple tower, fishing boats and a pier.
+
 **Bonus**
 
 - **Spark Rush**: no enemies, just springs, the dash and a tight clock. It opens at 12 quest stars.
@@ -68,15 +76,29 @@ stomp every enemy, smash every crate, finish without losing a heart, or beat the
 finished quest earns a quest star. The pause menu shows live progress, the world map shows the
 stars you have, and 12 stars open the bonus world.
 
-## Two heroes
+## Four heroes
 
-Pick **Hero** on the title screen. Both heroes can play every world, and they share progress.
+Pick a hero from the home screen. Every hero can play every world, and they share progress. Each
+one collects their own version of Sparks and Tokens.
 
-- **Clawd** collects Sparks and golden Tokens.
-- **Marathi Manus** has a man bun, a neckband and a phone that's always out. He collects lizards
-  and Komodo dragons instead. Leave him idle and he fixes his bun, then takes a selfie. His face is
-  a photo mapped onto a curved plate on the low-poly head, and it switches to a tongue-out photo
-  while he dances or takes a selfie.
+| Hero | From | Collects | Idle routine |
+|---|---|---|---|
+| **Clawd** | The Workshop | Sparks, golden Tokens | Bobs and blinks |
+| **Marathi Manus** | Maharashtra | Lizards, Komodo dragons | Fixes his bun, then takes a tongue-out selfie |
+| **Mahak** | Uttarakhand | Brahma Kamal flowers, Himalayan Monals | Brings her braid forward, then shades her eyes to look across the valley |
+| **Lingraj** | Odisha | Rasagolas, Konark wheels | Wipes his forehead with his gamucha, then greets you with a namaskar |
+
+Marathi Manus's face is a photo mapped onto a curved plate on the low-poly head. Mahak and Lingraj
+are original characters with modelled faces: Mahak wears a knitted sweater, a ghagra, a nose ring
+and a long braid with a red tassel; Lingraj wears a kurta with an ikat border, a dhoti and a checked
+gamucha.
+
+## Gamer tag and settings
+
+The first time the game opens, it makes up a gamer tag (like `FilmyYak32`) and remembers it in that
+browser, so there's no login. Tap the tag at the top right of the home screen to rename it
+(3–16 letters, numbers or `_`). Settings are split into Sound, Graphics, Controls and Profile
+tabs; Profile also has a reset-progress button that asks for a second tap.
 
 ## Music
 

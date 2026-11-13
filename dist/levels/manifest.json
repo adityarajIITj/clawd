@@ -339,5 +339,67 @@
    "par",
    "no_hurt"
   ]
+ },
+ {
+  "id": 12,
+  "campaign": "pahadi",
+  "file": "12_valley_of_flowers.json",
+  "name": "Valley of Flowers",
+  "subtitle": "Where the Brahma Kamal blooms above the clouds",
+  "theme": {
+   "skyTop": [
+    0.2471,
+    0.498,
+    0.8392
+   ],
+   "skyHorizon": [
+    0.8118,
+    0.902,
+    0.9725
+   ],
+   "accent": [
+    0.7843,
+    0.2902,
+    0.4157
+   ]
+  },
+  "sparks": 61,
+  "parTime": 130,
+  "quests": [
+   "all_sparks",
+   "crates",
+   "tokens"
+  ]
+ },
+ {
+  "id": 13,
+  "campaign": "odisha",
+  "file": "13_konark_sun_shore.json",
+  "name": "Konark Sun Shore",
+  "subtitle": "The first light of morning on the Odisha coast",
+  "theme": {
+   "skyTop": [
+    0.2902,
+    0.4549,
+    0.7843
+   ],
+   "skyHorizon": [
+    1.0,
+    0.7843,
+    0.5647
+   ],
+   "accent": [
+    0.8784,
+    0.6275,
+    0.3137
+   ]
+  },
+  "sparks": 60,
+  "parTime": 120,
+  "quests": [
+   "all_sparks",
+   "stomp_all",
+   "par"
+  ]
  }
 ]

@@ -59,6 +59,10 @@ STYLES: dict[str, dict[str, list[float]]] = {
     "beach":    {"top": hexc("f2d9a8"), "side": hexc("c4643f"), "rock": hexc("963f2c")},
     "lakeshore":{"top": hexc("4f8a5a"), "side": hexc("8a5a44"), "rock": hexc("5a3a34")},
     "lotus":    {"top": hexc("f2a6c0"), "side": hexc("5f9a5a"), "rock": hexc("3f6a3f")},
+    "alpine":   {"top": hexc("7aa85a"), "side": hexc("8a8478"), "rock": hexc("5e5a56")},
+    "slate":    {"top": hexc("9aa0a8"), "side": hexc("6a6e78"), "rock": hexc("4a4e58")},
+    "sandbeach":{"top": hexc("f2dcae"), "side": hexc("d8a878"), "rock": hexc("a87048")},
+    "khondalite":{"top": hexc("d8a070"), "side": hexc("b87848"), "rock": hexc("8a5434")},
     "ice":      {"top": hexc("e6eefa"), "side": hexc("bcd8f0"), "rock": hexc("7fa6d0")},
     "taxi":     {"top": hexc("f2c230"), "side": hexc("1c1c20"), "rock": hexc("101014")},
     "rooftop":  {"top": hexc("8a8f9a"), "side": hexc("4a4f60"), "rock": hexc("2a2e3c")},
@@ -76,12 +80,14 @@ DECOR_PRESETS: dict[str, list[tuple[str, float, float, float]]] = {
     "sahyadri": [("tree", 3, 0.9, 1.5), ("bush", 3, 0.8, 1.3), ("marigold", 2, 0.9, 1.2), ("rock", 3, 0.6, 1.3), ("flower", 2, 0.8, 1.2)],
     "konkan":  [("palm", 4, 0.9, 1.4), ("bush", 2, 0.8, 1.2), ("marigold", 1, 0.9, 1.1), ("rock", 2, 0.6, 1.1)],
     "festival": [("kandil", 1.5, 0.9, 1.1), ("diya", 3, 0.9, 1.3), ("marigold", 3, 0.9, 1.3), ("tree", 1, 0.9, 1.2), ("bush", 1, 0.8, 1.1)],
+    "himalaya": [("deodar", 3, 0.9, 1.4), ("buransh", 2, 0.9, 1.3), ("kamal", 3, 0.9, 1.3), ("rock", 2, 0.6, 1.2), ("flower", 2, 0.8, 1.2)],
+    "kalinga": [("palm", 4, 0.9, 1.4), ("bush", 2, 0.8, 1.2), ("marigold", 2, 0.9, 1.2), ("rock", 1, 0.6, 1.0)],
     "frost":   [("pine", 4, 0.9, 1.5), ("crystal", 2, 0.6, 1.2), ("rock", 2, 0.6, 1.2), ("snowman", 0.6, 1.0, 1.15)],
     "city":    [("tank", 2, 0.9, 1.2), ("dish", 2, 0.9, 1.2), ("lamp", 2, 1.0, 1.0)],
     "candy":   [("tree", 2, 0.9, 1.3), ("flower", 5, 0.9, 1.4), ("bush", 2, 0.8, 1.2)],
     "none": [],
 }
-COLLIDE_DECOR = {"tree": 0.35, "palm": 0.3, "cactus": 0.4, "column": 0.55, "brazier": 0.45, "pine": 0.3, "tank": 0.6, "snowman": 0.4}
+COLLIDE_DECOR = {"tree": 0.35, "palm": 0.3, "cactus": 0.4, "column": 0.55, "brazier": 0.45, "pine": 0.3, "tank": 0.6, "snowman": 0.4, "deodar": 0.35, "buransh": 0.35}
 
 
 class LintError(Exception):
@@ -197,7 +203,7 @@ class Compiler:
         self.islands.append({"pos": [x, y, z], "radius": r, "decor": e.get("decor", "none"),
                              "density": e.get("density", 1.0), "moving": bool(e.get("move")),
                              "solid": len(self.solids) - (2 if shape == "pillar" and depth - thick > 0.5 else 1),
-                             "grass": e.get("grass", e.get("decor") in ("meadow", "jungle", "sahyadri", "festival"))})
+                             "grass": e.get("grass", e.get("decor") in ("meadow", "jungle", "sahyadri", "festival", "himalaya"))})
 
     def block(self, e: dict):
         x, y, z = e["pos"]
@@ -321,7 +327,7 @@ class Compiler:
                 rad = math.sqrt(self.rng.random()) * r * 0.86
                 px, pz = x + math.cos(ang) * rad, z + math.sin(ang) * rad
                 mesh, _, s0, s1 = self.rng.choices(preset, weights)[0]
-                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6, "kandil": 2.4, "pine": 2.4, "tank": 2.8, "dish": 1.8, "snowman": 2.0}.get(mesh, 1.0)
+                spacing = {"tree": 2.6, "palm": 2.4, "column": 3.0, "brazier": 2.5, "cactus": 2.0, "crystal": 1.6, "kandil": 2.4, "pine": 2.4, "tank": 2.8, "dish": 1.8, "snowman": 2.0, "deodar": 2.6, "buransh": 2.6}.get(mesh, 1.0)
                 # big collidable things stay on the outer ring so the centre path is clear
                 if mesh in COLLIDE_DECOR and rad < r * 0.5:
                     continue

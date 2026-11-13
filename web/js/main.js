@@ -3,7 +3,10 @@ import { Renderer, lin } from './gl.js';
 import { Input } from './input.js';
 import { Audio } from './audio.js';
 import { Camera } from './camera.js';
-import { Clawd, Manus } from './player.js';
+import { Clawd, Manus, Mahak, Lingraj } from './player.js';
+import { HEROES, HERO_ORDER, SETS, HERO_ART } from './heroes.js';
+import { buildMahak, buildLingraj, buildBrahmaKamal, buildMonal, buildRasagola, buildKonarkWheel } from './meshes_heroes.js';
+import { loadProfile, saveTag, randomTag } from './profile.js';
 import { buildManus, buildLizard, buildKomodo } from './meshes_mh.js';
 import { World } from './level.js';
 import { UI, fmtTime, starIcon } from './ui.js';
@@ -26,7 +29,12 @@ class Game {
     this.isTouch = (window.matchMedia && matchMedia('(pointer: coarse)').matches) || navigator.maxTouchPoints > 0;
     if (this.isTouch && !localStorage.getItem('clawd.settings')) this.settings.quality = 'low';
     this.applyQualityPreset(false);
-    this.character = localStorage.getItem('clawd.character') === 'manus' ? 'manus' : 'clawd';
+    const savedHero = localStorage.getItem('clawd.character');
+    this.character = HEROES[savedHero] ? savedHero : 'clawd';
+    this.profile = loadProfile();
+    this.mapSet = null;
+    this.settingsTab = 'sound';
+    this.resetArmed = false;
     this.save = Object.assign({ unlocked: 1, unlockedManus: 6, levels: {} }, JSON.parse(localStorage.getItem('clawd.save') || '{}'));
     this.ui = new UI(this);
     this.input = new Input(this.canvas);
@@ -83,8 +91,14 @@ class Game {
         manus: buildManus(r),
         lizard: buildLizard(r),
         komodo: buildKomodo(r),
+        mahak: buildMahak(r),
+        lingraj: buildLingraj(r),
+        kamal: buildBrahmaKamal(r),
+        monal: buildMonal(r),
+        rasagola: buildRasagola(r),
+        konark: buildKonarkWheel(r),
       };
-      this.players = { clawd: new Clawd(this.shared.clawd), manus: new Manus(this.shared.manus) };
+      this.players = { clawd: new Clawd(this.shared.clawd), manus: new Manus(this.shared.manus), mahak: new Mahak(this.shared.mahak), lingraj: new Lingraj(this.shared.lingraj) };
       this.player = this.players[this.character];
       this.players.manus.faces = { neutral: r.loadTexture('img/manus_face.png'), tongue: r.loadTexture('img/manus_face_tongue.png') };
       this.ui.setLoading(0.5, 'Composing the soundtrack…');
@@ -145,14 +159,20 @@ class Game {
     this.ui.resetHUD();
   }
 
-  isManus() { return this.character === 'manus'; }
-  homeWorld() { return this.isManus() ? 6 : 1; }
+  hero() { return HEROES[this.character]; }
+  homeWorld() { return this.campaignList(this.hero().home)[0]?.id || 1; }
+  setOrder() {
+    const all = ['clawd', 'manus', 'pahadi', 'odisha', 'bonus'].filter((c) => this.campaignList(c).length);
+    const home = this.hero().home;
+    return [home, ...all.filter((c) => c !== home)];
+  }
   campaignOf(id) { return this.levels[id]?.campaign || 'clawd'; }
   campaignList(c) { return this.manifest.filter((m) => (m.campaign || 'clawd') === c).sort((a, b) => a.id - b.id); }
   worldIndex(id) { return this.campaignList(this.campaignOf(id)).findIndex((m) => m.id === id); }
   worldLabel(id) {
     const c = this.campaignOf(id), n = this.worldIndex(id) + 1;
-    return c === 'bonus' ? 'Bonus World' : c === 'manus' ? `Maharashtra · World ${n}` : `World ${n}`;
+    if (c === 'bonus') return 'Bonus World';
+    return c === 'clawd' ? `World ${n}` : `${SETS[c]?.name || c} · World ${n}`;
   }
   nextWorld(id) { const l = this.campaignList(this.campaignOf(id)); return l[this.worldIndex(id) + 1]?.id || null; }
   questStars() { return countStars(this.save); }
@@ -173,14 +193,12 @@ class Game {
       stomped: w.stomped, enemyTotal: w.enemyTotal, crates: w.cratesSmashed, crateTotal: w.crates.length, finished,
     };
   }
-  words() {
-    return this.isManus()
-      ? { spark: 'Lizard', sparks: 'Lizards', token: 'Komodo Dragon', tokens: 'Komodo dragons' }
-      : { spark: 'Spark', sparks: 'Sparks', token: 'Golden Token', tokens: 'Tokens' };
-  }
+  words() { return this.hero().words; }
 
   setCharacter(c) {
+    if (!HEROES[c]) return;
     this.character = c;
+    this.mapSet = null;
     localStorage.setItem('clawd.character', c);
     this.player = this.players[c];
     this.ui.setCollectibleIcons(c);
@@ -190,21 +208,42 @@ class Game {
 
   showCharacters() {
     this.state = 'select';
-    const card = (id, name, sub, art) => `
+    const card = (id) => {
+      const h = HEROES[id];
+      return `
       <button class="card char ${this.character === id ? 'picked' : ''}" data-act="pick-char" data-id="${id}">
-        <div class="card-art char-art ${id}">${art}${this.character === id ? '<div class="picked-tag">Selected</div>' : ''}</div>
-        <div class="card-body"><div class="card-title">${name}</div><div class="card-sub">${sub}</div></div>
+        <div class="card-art char-art ${id}">${HERO_ART[id]}${this.character === id ? '<div class="picked-tag">Selected</div>' : ''}</div>
+        <div class="card-body">
+          <div class="card-title">${h.name}</div>
+          <div class="card-from">${h.from}</div>
+          <div class="card-sub">${h.blurb}</div>
+          <div class="collects"><span>${h.icons.spark(18)} ${h.words.sparks}</span><span>${h.icons.token(18, true)} ${h.words.tokens}</span></div>
+        </div>
       </button>`;
+    };
     this.ui.show('characters', `
       <div class="select-wrap chars">
         <h2>Choose your hero</h2>
-        <div class="cards two">
-          ${card('clawd', 'Clawd', 'A small, helpful terracotta critter. Collects Sparks and golden Tokens.', CLAWD_ART)}
-          ${card('manus', 'Marathi Manus', 'Man bun, neckband, phone always ready. Collects lizards and Komodo dragons instead.', MANUS_ART)}
-        </div>
-        <p class="hero-note">Both heroes can play every world. Your progress and quest stars are shared.</p>
+        <div class="cards four">${HERO_ORDER.map(card).join('')}</div>
+        <p class="hero-note">Every hero can play every world. Progress and quest stars are shared.</p>
         <div class="row"><button data-act="title" class="ghost">Back</button></div>
       </div>`, 'select');
+  }
+
+  showMultiplayer() {
+    this.state = 'select';
+    this.ui.show('multiplayer', `
+      <div class="panel wide mp-panel">
+        <div class="kicker">Coming in the next update</div>
+        <h2>Multiplayer</h2>
+        <p class="note center">Team up with friends in co-op worlds built for teamwork: hold switches for each other, stand on a teammate to reach high ledges, carry things together.</p>
+        <div class="mp-facts">
+          <div><b>Your gamer tag</b><span>${esc(this.profile.tag)}</span></div>
+          <div><b>Party size</b><span>2 to 4 players</span></div>
+          <div><b>Joining</b><span>Room code or link, no login</span></div>
+        </div>
+        <div class="row"><button data-act="profile">Edit gamer tag</button><button data-act="title" class="ghost">Back</button></div>
+      </div>`, '');
   }
 
   toTitle() {
@@ -216,6 +255,8 @@ class Game {
     this.input.wantLock = false;
     this.input.releaseLock();
     this.audio.playMusic('title');
+    const done = this.manifest.filter((m) => this.save.levels[m.id]?.done).length;
+    const h = this.hero();
     this.ui.show('title', `
       <div class="title-wrap">
         <div class="logo">
@@ -224,14 +265,20 @@ class Game {
           <div class="tagline">The Spark Odyssey</div>
           <div class="byline">by Aditya</div>
         </div>
-        <div class="menu">
-          <button data-act="play">Play</button>
-          <button data-act="characters">Hero: ${this.isManus() ? 'Marathi Manus' : 'Clawd'}</button>
-          <button data-act="settings">Settings</button>
-          <button data-act="howto">How to Play</button>
-          <button data-act="credits">Credits</button>
+        <div class="home-menu">
+          <div class="tiles">
+            <button class="tile primary" data-act="play"><b>Play Solo</b><span>${done} / ${this.manifest.length} worlds · ${this.questStars()} ★</span></button>
+            <button class="tile mp" data-act="multiplayer"><b>Multiplayer</b><span>2–4 players · coming soon</span></button>
+          </div>
+          <div class="subrow">
+            <button class="pill hero-pill" data-act="characters"><span class="mini-art">${HERO_ART[this.character]}</span><span>${h.name}</span></button>
+            <button class="pill" data-act="settings">Settings</button>
+            <button class="pill" data-act="howto">How to Play</button>
+            <button class="pill" data-act="credits">Credits</button>
+          </div>
         </div>
-        <div class="foot">${starIcon(11, '#ffd98a')} ${this.questStars()} / ${this.totalStars()} quest stars · Rendered in WebGL2 · Physics in Rust · VFX in C++ · Levels built in Python</div>
+        <button class="profile-chip" data-act="profile" title="Your gamer tag"><i class="dot" style="background:${h.color}"></i><span>${esc(this.profile.tag)}</span></button>
+        <div class="foot">Rendered in WebGL2 · Physics in Rust · VFX in C++ · Levels built in Python</div>
       </div>`, 'title');
   }
 
@@ -255,7 +302,7 @@ class Game {
             <div class="card-title">${m.name}</div>
             <div class="card-sub">${m.subtitle}</div>
             <div class="card-stats">
-              <span>${starIcon(13, '#d97757')} ${rec.sparks ?? 0}/${m.sparks}</span>
+              <span>${this.hero().icons.spark(15)} ${rec.sparks ?? 0}/${m.sparks}</span>
               <span class="tok">${toks.map((t) => `<i class="${t ? 'on' : ''}"></i>`).join('')}</span>
               <span>${rec.best ? fmtTime(rec.best) : '—'}</span>
               ${rec.rank ? `<span class="rank r-${rec.rank}">${rec.rank}</span>` : ''}
@@ -264,21 +311,27 @@ class Game {
           </div>
         </button>`;
     };
-    const sets = { clawd: 'The Spark Realms', manus: 'Maharashtra Tales', bonus: 'Bonus' };
-    const order = this.isManus() ? ['manus', 'clawd', 'bonus'] : ['clawd', 'manus', 'bonus'];
-    const cards = order.map((c) => {
-      const list = this.campaignList(c);
-      if (!list.length) return '';
-      return `<div class="campaign-label">${sets[c]}</div><div class="cards n${Math.min(list.length, 6)}">${list.map(card).join('')}</div>`;
+    const order = this.setOrder();
+    if (!this.mapSet || !order.includes(this.mapSet)) this.mapSet = order[0];
+    const cur = this.mapSet;
+    const list = this.campaignList(cur);
+    const tabs = order.map((c) => {
+      const l = this.campaignList(c);
+      const d = l.filter((m) => this.save.levels[m.id]?.done).length;
+      return `<button class="set-tab ${c === cur ? 'on' : ''}" data-act="map-tab" data-set="${c}">${SETS[c]?.name || c}<small>${d}/${l.length}</small></button>`;
     }).join('');
     const stars = this.questStars();
     this.ui.show('select', `
       <div class="select-wrap">
         <h2>Choose a World</h2>
         <div class="star-total">${starIcon(15, '#ffd98a')} <b>${stars}</b> / ${this.totalStars()} quest stars${stars < BONUS_STARS ? ` · bonus world opens at ${BONUS_STARS}` : ''}</div>
-        ${cards}
+        <div class="set-tabs">${tabs}</div>
+        <div class="cards n${Math.min(list.length, 6)}">${list.map(card).join('')}</div>
         <div class="row"><button data-act="title" class="ghost">Back</button></div>
       </div>`, 'select');
+    const btns = this.ui.buttons();
+    const first = btns.findIndex((b) => b.classList.contains('card') && !b.classList.contains('locked'));
+    if (first >= 0) this.ui.focus(first, true);
   }
 
   startWorld(id) {
@@ -341,6 +394,13 @@ class Game {
     switch (act) {
       case 'play': this.showSelect(); break;
       case 'characters': this.showCharacters(); break;
+      case 'multiplayer': this.showMultiplayer(); break;
+      case 'map-tab': this.mapSet = data.set; this.showSelect(); break;
+      case 'profile': this.settingsTab = 'profile'; this.showSettings(); break;
+      case 'settings-tab': this.settingsTab = data.tab; this.resetArmed = false; this.showSettings(); break;
+      case 'save-tag': this.applyTag(document.getElementById('tagInput')?.value); break;
+      case 'reroll-tag': this.applyTag(randomTag()); break;
+      case 'reset-progress': this.resetProgress(); break;
       case 'pick-char': this.setCharacter(data.id); break;
       case 'select': this.audio.duck(1); this.showSelect(); if (this.levelId) this.ui.showHUD(false); break;
       case 'title': this.toTitle(); break;
@@ -355,7 +415,7 @@ class Game {
         else this.showEnding();
         break;
       }
-      case 'settings': this.showSettings(); break;
+      case 'settings': if (this.settingsTab === 'profile') this.settingsTab = 'sound'; this.showSettings(); break;
       case 'settings-back': if (this.prevState === 'paused') { this.state = 'play'; this.pause(); } else this.toTitle(); break;
       case 'howto': this.showHowTo(); break;
       case 'credits': this.showCredits(); break;
@@ -369,22 +429,65 @@ class Game {
     const v = this.audio.vol, s = this.settings;
     const slider = (key, label, val, min = 0, max = 1, step = 0.05) =>
       `<label class="set"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}" data-key="${key}"></label>`;
+    const tabs = [['sound', 'Sound'], ['graphics', 'Graphics'], ['controls', 'Controls'], ['profile', 'Profile']];
+    const cur = this.settingsTab;
+    const qHint = { low: 'Fastest. Best for older phones.', medium: 'Balanced for most phones and laptops.', high: 'Sharpest image and softest shadows.' };
+    let body = '';
+    if (cur === 'sound') {
+      body = `${slider('master', 'Master volume', v.master)}${slider('music', 'Music', v.music)}${slider('sfx', 'Sound effects', v.sfx)}`;
+    } else if (cur === 'graphics') {
+      body = `<label class="set"><span>Quality<small>${qHint[s.quality] || ''}</small></span>
+          <select data-key="quality">${['low', 'medium', 'high'].map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select></label>
+        <label class="set"><span>Show FPS</span><input type="checkbox" data-key="fps" ${s.fps ? 'checked' : ''}></label>`;
+    } else if (cur === 'controls') {
+      body = `${slider('sens', 'Camera sensitivity', s.sens, 0.3, 2.5, 0.1)}
+        <label class="set"><span>Invert camera Y</span><input type="checkbox" data-key="invertY" ${s.invertY ? 'checked' : ''}></label>
+        <p class="note small">${this.input.touch.enabled ? 'Touch: drag the left side to move, the right side to look. Jump, Pound and Dash buttons sit on the right.' : 'Keyboard: WASD move · Space jump · Shift pound · F dash · Esc pause. Gamepads work too.'}</p>`;
+    } else {
+      body = `<label class="set tag-row"><span>Gamer tag<small>Saved in this browser. No login needed.</small></span>
+          <span class="tag-edit"><input id="tagInput" type="text" maxlength="16" value="${esc(this.profile.tag)}" spellcheck="false" autocomplete="off">
+          <button data-act="save-tag" class="mini">Save</button><button data-act="reroll-tag" class="mini ghost-mini" title="Random tag">Random</button></span></label>
+        <div id="tagMsg" class="tag-msg"></div>
+        <div class="set"><span>Hero<small>${this.hero().from}</small></span><button data-act="characters" class="mini">${this.hero().name}</button></div>
+        <div class="set"><span>Progress<small>${this.manifest.filter((m) => this.save.levels[m.id]?.done).length} worlds done · ${this.questStars()} quest stars</small></span>
+          <button data-act="reset-progress" class="mini danger">${this.resetArmed ? 'Tap again to erase' : 'Reset progress'}</button></div>`;
+    }
     this.ui.show('settings', `
-      <div class="panel wide">
+      <div class="panel wide settings-panel">
         <h2>Settings</h2>
-        <div class="settings">
-          ${slider('master', 'Master volume', v.master)}
-          ${slider('music', 'Music', v.music)}
-          ${slider('sfx', 'Sound effects', v.sfx)}
-          ${slider('sens', 'Camera sensitivity', s.sens, 0.3, 2.5, 0.1)}
-          <label class="set"><span>Graphics quality</span>
-            <select data-key="quality">${['low', 'medium', 'high'].map((q) => `<option value="${q}" ${s.quality === q ? 'selected' : ''}>${q[0].toUpperCase() + q.slice(1)}</option>`).join('')}</select></label>
-          <label class="set"><span>Invert camera Y</span><input type="checkbox" data-key="invertY" ${s.invertY ? 'checked' : ''}></label>
-          <label class="set"><span>Show FPS</span><input type="checkbox" data-key="fps" ${s.fps ? 'checked' : ''}></label>
-        </div>
+        <div class="tabs">${tabs.map(([k, l]) => `<button class="tab ${k === cur ? 'on' : ''}" data-act="settings-tab" data-tab="${k}">${l}</button>`).join('')}</div>
+        <div class="settings">${body}</div>
         <div class="row"><button data-act="settings-back">Done</button></div>
       </div>`, this.prevState === 'paused' ? 'dim' : '');
     if (this.prevState === 'paused') this.state = 'paused';
+    const tabIdx = this.ui.buttons().findIndex((b) => b.dataset.tab === cur);
+    if (tabIdx >= 0) this.ui.focus(tabIdx, true);
+    const inp = document.getElementById('tagInput');
+    if (inp) inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.applyTag(inp.value); });
+  }
+
+  applyTag(tag) {
+    const res = saveTag(this.profile, tag);
+    if (!res.ok) {
+      const m = document.getElementById('tagMsg');
+      if (m) { m.textContent = res.error; m.className = 'tag-msg err'; }
+      this.audio.play('hurt', { vol: 0.3 });
+      return;
+    }
+    this.audio.play('checkpoint', { vol: 0.5 });
+    this.showSettings();
+    const m = document.getElementById('tagMsg');
+    if (m) { m.textContent = `Saved. You are ${this.profile.tag}.`; m.className = 'tag-msg ok'; }
+  }
+
+  resetProgress() {
+    if (!this.resetArmed) { this.resetArmed = true; this.showSettings(); return; }
+    this.resetArmed = false;
+    this.save = { unlocked: 1, levels: {} };
+    localStorage.setItem('clawd.save', JSON.stringify(this.save));
+    this.showSettings();
+    const m = document.getElementById('tagMsg');
+    if (m) { m.textContent = 'Progress erased. Fresh start!'; m.className = 'tag-msg ok'; }
   }
 
   setSetting(key, value) {
@@ -413,7 +516,7 @@ class Game {
           <div><kbd>📱</kbd><span>Touch: drag left side to move · drag right side to look · Jump, Pound &amp; Dash buttons · ❚❚ to pause</span></div>
           <div><kbd>🎮</kbd><span>Gamepad: left stick move · A jump · X / triggers pound · B / RB dash · right stick camera</span></div>
         </div>
-        <p class="note">Playing as <b>Marathi Manus</b>? Sparks become little lizards and Tokens become Komodo dragons. Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world. Each world also has <b>three quests</b>; every quest earns a star, and 12 stars open the bonus world.</p>
+        <p class="note">Each hero collects their own version of Sparks and Tokens: Marathi Manus finds lizards and Komodo dragons, Mahak finds Brahma Kamal flowers and Monals, and Lingraj finds rasagolas and Konark wheels. Collect <b>Sparks</b> to restore the Great Context Window — every 20 Sparks restores a heart. Find all three golden <b>Tokens</b> hidden in each world. Stomp <b>Glitchlings</b> and <b>Wisps</b>, hop over sunbeam sweepers, and touch <b>Lighthouses</b> to save your progress. Reach the portal to finish the world. Each world also has <b>three quests</b>; every quest earns a star, and 12 stars open the bonus world.</p>
         <div class="row"><button data-act="title">Back</button></div>
       </div>`);
   }
@@ -427,6 +530,7 @@ class Game {
         <p class="note center">Inspired by the song <b>“Vaat Majhi”</b> — sung by Reshma Sonawane, featuring Sara Shrawan. All rights belong to the original artists.</p>
         <div class="credits">
           <div><b>Rendering</b><span>WebGL2 · custom GLSL: soft shadows, HDR bloom, ACES tonemapping, illustrative toon lighting</span></div>
+          <div><b>Heroes</b><span>Clawd · Marathi Manus · Mahak from Uttarakhand · Lingraj from Odisha</span></div>
           <div><b>Gameplay core</b><span>Rust → WebAssembly: character controller &amp; procedural island sculpting</span></div>
           <div><b>VFX core</b><span>Freestanding C++ → WebAssembly: 8k-particle simulation</span></div>
           <div><b>Tools</b><span>Python: level compiler &amp; reachability linter, procedural sound-effect synthesizer</span></div>
@@ -438,32 +542,18 @@ class Game {
   }
 
   showEnding() {
-    if (this.campaignOf(this.levelId) === 'manus') return this.showManusEnding();
+    const set = this.campaignOf(this.levelId);
+    const E = ENDINGS[set] || ENDINGS.clawd;
     this.state = 'ending';
     this.ui.showHUD(false);
     this.audio.playMusic('ending', 1.0);
-    const realm = this.campaignList('clawd');
-    const total = realm.reduce((a, m) => a + ((this.save.levels[m.id] || {}).tokens || []).filter(Boolean).length, 0);
-    this.ui.show('ending', `
-      <div class="panel wide ending">
-        <div class="logo-star small">${starIcon(64, '#d97757')}</div>
-        <h2>The Great Context Window is restored</h2>
-        <p class="story">Spark by spark, Clawd carried every lost thought home. The Window glows again over all six realms, wide enough to hold every question anyone might ask. Somewhere in the meadows, a new prompt is already being written.</p>
-        <p class="note center">${this.words().tokens} found: <b>${total} / ${realm.length * 3}</b> · Quest stars: <b>${this.questStars()} / ${this.totalStars()}</b></p>
-        <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
-      </div>`);
-  }
-
-  showManusEnding() {
-    this.state = 'ending';
-    this.ui.showHUD(false);
-    this.audio.playMusic('ending', 1.0);
-    const ids = this.campaignList('manus').map((m) => m.id);
+    const ids = this.campaignList(set).map((m) => m.id);
     const total = ids.reduce((a, id) => a + ((this.save.levels[id] || {}).tokens || []).filter(Boolean).length, 0);
     this.ui.show('ending', `
       <div class="panel wide ending">
-        <h2>Ghari aalo! — Home at last</h2>
-        <p class="story">From the misty Sahyadri forts to the Konkan pier, the lantern-lit lake and the rooftops of Mumbai, our hero took the slow road and found every corner worth finding. The kandils are glowing, the chai is hot, and the lizards are fast asleep.</p>
+        <div class="logo-star small">${starIcon(64, '#d97757')}</div>
+        <h2>${E.title}</h2>
+        <p class="story">${E.story}</p>
         <p class="note center">${this.words().tokens} found: <b>${total} / ${ids.length * 3}</b> · Quest stars: <b>${this.questStars()} / ${this.totalStars()}</b></p>
         <div class="row"><button data-act="select">World Map</button><button data-act="title" class="ghost">Title</button></div>
       </div>`);
@@ -682,7 +772,7 @@ class Game {
     if (events & EV.POUND) this.audio.play('pound', { vol: 0.6 });
     if (events & EV.DASH) {
       this.audio.play('dash', { vol: 0.7 });
-      const c = this.isManus() ? [1.2, 2.0, 1.2] : [2.2, 1.3, 0.7];
+      const c = this.hero().dash;
       for (let k = 0; k < 6; k++) fx.emit(fx.T.TRAIL, [p[0] - st[3] * 0.012 * k, p[1] + 0.3 + Math.random() * 0.5, p[2] - st[5] * 0.012 * k], 2, c, 0.22);
       fx.emit(fx.T.RING, [p[0], p[1] + 0.5, p[2]], 10, c, 3);
     }
@@ -802,28 +892,17 @@ class Game {
   }
 }
 
-function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+const ENDINGS = {
+  clawd: { title: 'The Great Context Window is restored', story: 'Spark by spark, every lost thought came home. The Window glows again over all six realms, wide enough to hold every question anyone might ask. Somewhere in the meadows, a new prompt is already being written.' },
+  manus: { title: 'Ghari aalo! — Home at last', story: 'From the misty Sahyadri forts to the Konkan pier, the lantern-lit lake and the rooftops of Mumbai, the slow road turned out to be the best one. The kandils are glowing, the chai is hot, and the lizards are fast asleep.' },
+  pahadi: { title: 'The valley is in bloom', story: 'High in the Himalaya the Brahma Kamal has opened, the monals are calling from the ridge, and the temple bells ring out over the valley. The trail home winds down through the deodars, and the stars come out early up here.' },
+  odisha: { title: 'The sun wheel turns', story: 'Morning breaks over the Odisha coast. The great stone wheels catch the first light, the fishing boats head out, and somebody has saved you one last rasagola. Not a bad way to end a journey.' },
+  bonus: { title: 'Victory lap complete', story: 'Nothing left to prove. Go and beat your best time.' },
+};
 
-const CLAWD_ART = `<svg viewBox="0 0 200 150" class="char-svg"><ellipse cx="100" cy="132" rx="60" ry="8" fill="rgba(0,0,0,.18)"/>
-  <rect x="48" y="40" width="104" height="78" rx="22" fill="#d97757" stroke="#3a1f16" stroke-width="4"/>
-  <rect x="36" y="70" width="18" height="24" rx="7" fill="#d97757" stroke="#3a1f16" stroke-width="4"/><rect x="146" y="70" width="18" height="24" rx="7" fill="#d97757" stroke="#3a1f16" stroke-width="4"/>
-  <rect x="78" y="62" width="11" height="24" rx="5" fill="#1f1a17"/><rect x="111" y="62" width="11" height="24" rx="5" fill="#1f1a17"/>
-  <ellipse cx="68" cy="94" rx="7" ry="4" fill="#f2a08a"/><ellipse cx="132" cy="94" rx="7" ry="4" fill="#f2a08a"/>
-  <rect x="64" y="116" width="16" height="16" rx="5" fill="#b85c3f"/><rect x="120" y="116" width="16" height="16" rx="5" fill="#b85c3f"/>
-  <line x1="100" y1="40" x2="100" y2="24" stroke="#b85c3f" stroke-width="4"/><polygon points="100,8 104,19 115,20 106,26 109,37 100,30 91,37 94,26 85,20 96,19" fill="#ffb37a"/></svg>`;
-const MANUS_ART = `<svg viewBox="0 0 200 150" class="char-svg"><ellipse cx="100" cy="146" rx="58" ry="6" fill="rgba(0,0,0,.18)"/>
-  <path d="M52 150 Q54 110 100 104 Q146 110 148 150Z" fill="#e6e3dc" stroke="#2a2220" stroke-width="3"/>
-  <circle cx="112" cy="130" r="8" fill="#d8484a"/><circle cx="112" cy="130" r="5" fill="#e6e3dc"/>
-  <path d="M72 108 Q100 124 128 108" fill="none" stroke="#222226" stroke-width="5"/>
-  <ellipse cx="100" cy="66" rx="34" ry="38" fill="#b47a56" stroke="#2a2220" stroke-width="3"/>
-  <path d="M68 78 Q72 104 100 106 Q128 104 132 78 Q120 92 100 92 Q80 92 68 78Z" fill="#3b2a22"/>
-  <path d="M65 62 Q62 26 100 26 Q138 26 135 62 Q128 40 100 38 Q72 40 65 62Z" fill="#17110f"/>
-  <circle cx="100" cy="18" r="11" fill="#17110f"/><rect x="94" y="25" width="12" height="5" rx="2" fill="#3a3236"/>
-  <ellipse cx="87" cy="64" rx="4" ry="5" fill="#120c0a"/><ellipse cx="113" cy="64" rx="4" ry="5" fill="#120c0a"/>
-  <path d="M80 54 L93 52 M107 52 L120 54" stroke="#17110f" stroke-width="3" stroke-linecap="round"/>
-  <path d="M90 86 Q100 82 110 86" stroke="#241814" stroke-width="4" fill="none" stroke-linecap="round"/>
-  <ellipse cx="100" cy="93" rx="6" ry="5" fill="#e0707a"/>
-  <rect x="150" y="62" width="20" height="36" rx="4" fill="#16161a" transform="rotate(12 160 80)"/></svg>`;
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 function rgb(c) { return `rgb(${Math.round(c[0] * 255)},${Math.round(c[1] * 255)},${Math.round(c[2] * 255)})`; }
 
@@ -837,6 +916,8 @@ function artFor(id) {
     6: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M0 110 L0 60 Q40 30 70 55 Q100 25 140 50 Q170 35 200 55 L200 110Z" fill="#4f7a52"/><rect x="60" y="58" width="60" height="22" fill="#6e7276"/><rect x="60" y="52" width="8" height="8" fill="#6e7276"/><rect x="80" y="52" width="8" height="8" fill="#6e7276"/><rect x="100" y="52" width="8" height="8" fill="#6e7276"/><rect x="130" y="50" width="6" height="60" fill="#e8f0f2" opacity=".85"/><g stroke="#cfe4f0" stroke-width="1.5" opacity=".8"><line x1="20" y1="5" x2="16" y2="18"/><line x1="60" y1="10" x2="56" y2="23"/><line x1="110" y1="2" x2="106" y2="15"/><line x1="170" y1="8" x2="166" y2="21"/></g></svg>`,
     7: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="150" cy="58" r="14" fill="#ffe0a0"/><rect x="0" y="80" width="200" height="30" fill="#2aa0b0"/><rect x="20" y="50" width="40" height="60" fill="#b4553a"/><rect x="20" y="46" width="40" height="7" fill="#f2d9a8"/><path d="M40 46 Q42 20 46 14" stroke="#7a5a3a" stroke-width="3" fill="none"/><path d="M46 14 q-14 -2 -20 6 M46 14 q12 -4 18 4 M46 14 q-4 -10 -12 -12 M46 14 q8 -8 14 -8" stroke="#4f9a3a" stroke-width="4" fill="none"/><path d="M110 84 L150 84 L144 92 L116 92Z" fill="#3d6fb0"/><path d="M130 84 L130 62 L142 82Z" fill="#f6eedc"/></svg>`,
     8: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="0" y="80" width="200" height="30" fill="#1a2a5a"/><circle cx="30" cy="12" r="1.5" fill="#fff"/><circle cx="160" cy="20" r="1.5" fill="#fff"/><rect x="40" y="30" width="3" height="52" fill="#b08a50"/><polygon points="52,40 56,50 66,50 58,56 61,66 52,60 43,66 46,56 38,50 48,50" fill="#ff9a3a"/><rect x="140" y="34" width="3" height="48" fill="#b08a50"/><polygon points="152,44 156,54 166,54 158,60 161,70 152,64 143,70 146,60 138,54 148,54" fill="#ff5a7a"/><ellipse cx="90" cy="92" rx="6" ry="2.5" fill="#b8582e"/><circle cx="90" cy="88" r="2.5" fill="#ffcf5a"/><ellipse cx="115" cy="98" rx="6" ry="2.5" fill="#b8582e"/><circle cx="115" cy="94" r="2.5" fill="#ffcf5a"/></svg>`,
+    12: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M0 70 L40 30 L70 55 L110 18 L150 50 L200 28 L200 110 L0 110Z" fill="#8aa8c8"/><path d="M110 18 L98 30 L106 28 L112 34 L118 27 L124 30Z M40 30 L32 40 L40 37 L46 42Z" fill="#fff"/><path d="M0 84 Q100 60 200 84 L200 110 L0 110Z" fill="#5f9a52"/><g fill="#e03a4a"><circle cx="30" cy="88" r="3"/><circle cx="60" cy="94" r="2.5"/><circle cx="150" cy="90" r="3"/></g><g fill="#f6eed2"><circle cx="90" cy="96" r="3"/><circle cx="120" cy="92" r="2.5"/><circle cx="170" cy="98" r="3"/></g><path d="M20 84 l7 -22 l7 22Z M180 86 l6 -20 l6 20Z" fill="#2f5a44"/></svg>`,
+    13: `<svg viewBox="0 0 200 110" class="card-svg"><circle cx="160" cy="44" r="16" fill="#ffd890"/><rect x="0" y="82" width="200" height="28" fill="#2a9ab0"/><path d="M0 86 Q100 74 200 86 L200 96 L0 96Z" fill="#f2d9a8"/><path d="M30 82 L30 50 Q44 20 58 50 L58 82Z" fill="#c89a6a"/><circle cx="44" cy="22" r="4" fill="#c89a6a"/><g fill="none" stroke="#a8784e" stroke-width="4"><circle cx="110" cy="66" r="14"/></g><g stroke="#a8784e" stroke-width="2"><line x1="96" y1="66" x2="124" y2="66"/><line x1="110" y1="52" x2="110" y2="80"/><line x1="100" y1="56" x2="120" y2="76"/><line x1="120" y1="56" x2="100" y2="76"/></g><path d="M150 92 L182 92 L176 98 L156 98Z" fill="#3d6fb0"/></svg>`,
     9: `<svg viewBox="0 0 200 110" class="card-svg"><path d="M10 110 L60 40 L110 110Z" fill="#bcd8f0"/><path d="M60 40 L44 62 L54 58 L60 66 L68 57 L76 62Z" fill="#fff"/><path d="M90 110 L145 55 L200 110Z" fill="#9fc4e8"/><path d="M145 55 L130 70 L140 67 L146 74 L153 66 L160 70Z" fill="#fff"/><g fill="#fff"><circle cx="30" cy="20" r="2"/><circle cx="90" cy="30" r="1.6"/><circle cx="170" cy="18" r="2"/><circle cx="120" cy="12" r="1.4"/></g><path d="M20 96 l8 -18 l8 18Z" fill="#2f7a6a"/><path d="M170 100 l7 -16 l7 16Z" fill="#2f7a6a"/></svg>`,
     10: `<svg viewBox="0 0 200 110" class="card-svg"><rect x="0" y="92" width="200" height="18" fill="#12204a"/><g fill="#2c3046"><rect x="14" y="40" width="34" height="60"/><rect x="60" y="24" width="30" height="76"/><rect x="104" y="46" width="38" height="54"/><rect x="152" y="30" width="32" height="70"/></g><g fill="#ffd98a"><rect x="20" y="48" width="5" height="6"/><rect x="34" y="60" width="5" height="6"/><rect x="66" y="32" width="5" height="6"/><rect x="78" y="46" width="5" height="6"/><rect x="66" y="62" width="5" height="6"/><rect x="112" y="54" width="5" height="6"/><rect x="128" y="70" width="5" height="6"/><rect x="160" y="40" width="5" height="6"/><rect x="172" y="56" width="5" height="6"/></g><rect x="66" y="16" width="14" height="8" rx="3" fill="#1e2026"/><rect x="92" y="84" width="16" height="7" rx="2" fill="#f2c230"/><rect x="92" y="88" width="16" height="4" fill="#1c1c20"/></svg>`,
     11: `<svg viewBox="0 0 200 110" class="card-svg"><ellipse cx="50" cy="78" rx="34" ry="8" fill="#ffe1ee"/><path d="M16 78 Q50 108 84 78Z" fill="#ff9ac0"/><ellipse cx="150" cy="56" rx="30" ry="7" fill="#fff6ea"/><path d="M120 56 Q150 84 180 56Z" fill="#f2c9dc"/><g fill="#ffb37a"><polygon points="100,20 103,30 113,31 105,37 108,47 100,41 92,47 95,37 87,31 97,30"/><polygon points="60,40 62,46 68,47 63,51 65,57 60,53 55,57 57,51 52,47 58,46"/><polygon points="140,24 142,30 148,31 143,35 145,41 140,37 135,41 137,35 132,31 138,30"/></g><path d="M40 70 q10 -30 60 -34" stroke="#fff" stroke-width="2" stroke-dasharray="3 5" fill="none"/></svg>`,
